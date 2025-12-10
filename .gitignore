@@ -34,8 +34,8 @@ build/
 coverage/
 
 # Frontend (Vite/React)
-frontend/dist/
-frontend/build/
+UI/dist/
+UI/build/
 
 # Backend (TS compile)
 backend/dist/
