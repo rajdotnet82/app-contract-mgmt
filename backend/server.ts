@@ -7,12 +7,13 @@ import { connectDb } from "./src/config/db";
 dotenv.config();
 
 const app = express();
+
 app.use(express.json());
 app.use(cors({ origin: process.env.CLIENT_ORIGIN }));
 
-app.get("/health", (req, res) =>
-  res.json({ ok: true, service: "contract-mgmt-api" })
-);
+app.get("/health", (req, res) => {
+  res.json({ ok: true, service: "contract-mgmt-api" });
+});
 
 app.use("/api/contracts", contractsRouter);
 

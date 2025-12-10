@@ -18,6 +18,9 @@ import Blank from "./pages/Blank";
 import AppLayout from "./layout/AppLayout";
 import { ScrollToTop } from "./components/common/ScrollToTop";
 import Home from "./pages/Dashboard/Home";
+import ContractsPage from "./pages/Contracts/ContractsPage";
+import ContractCreatePage from "./pages/Contracts/ContractCreatePage";
+import ContractEditPage from "./pages/Contracts/ContractEditPage";
 
 export default function App() {
   return (
@@ -28,6 +31,10 @@ export default function App() {
           {/* Dashboard Layout */}
           <Route element={<AppLayout />}>
             <Route index path="/" element={<Home />} />
+
+            <Route path="/contracts" element={<ContractsPage />} />
+            <Route path="/contracts/new" element={<ContractCreatePage />} />
+            <Route path="/contracts/:id/edit" element={<ContractEditPage />} />
 
             {/* Others Page */}
             <Route path="/profile" element={<UserProfiles />} />

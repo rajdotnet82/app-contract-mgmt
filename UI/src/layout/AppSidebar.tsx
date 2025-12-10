@@ -13,6 +13,7 @@ import {
   PieChartIcon,
   PlugInIcon,
   TableIcon,
+  ContractIcon,
   UserCircleIcon,
 } from "../icons";
 import { useSidebar } from "../context/SidebarContext";
@@ -30,6 +31,11 @@ const navItems: NavItem[] = [
     icon: <GridIcon />,
     name: "Dashboard",
     subItems: [{ name: "Ecommerce", path: "/", pro: false }],
+  },
+  {
+    icon: <ContractIcon />,
+    name: "Contracts",
+    path: "/contracts",
   },
   {
     icon: <CalenderIcon />,
