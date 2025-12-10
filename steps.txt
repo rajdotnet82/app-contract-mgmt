@@ -1,0 +1,15 @@
+cd app-contract-mgmt
+git status
+mkdir backend frontend
+
+Setup BackEnd
+cd backend
+npm init -y
+npm i express cors dotenv
+npm i -D nodemon
+
+
+npm run dev
+
+
+Setup Frontend (React)

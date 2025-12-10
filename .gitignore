@@ -1,0 +1,61 @@
+# =========================
+# OS
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# Logs
+# =========================
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# =========================
+# Environment files
+# =========================
+.env
+.env.*
+**/.env
+**/.env.*
+
+# =========================
+# Node dependencies
+# =========================
+node_modules/
+
+# =========================
+# Build outputs
+# =========================
+dist/
+build/
+coverage/
+
+# Frontend (Vite/React)
+frontend/dist/
+frontend/build/
+
+# Backend (TS compile)
+backend/dist/
+
+# =========================
+# Cache
+# =========================
+.cache/
+*.tsbuildinfo
+
+# =========================
+# IDE / Editor
+# =========================
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# =========================
+# Optional: local db files
+# (ignore if you use local Mongo files inside repo)
+# =========================
+data/
