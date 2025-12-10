@@ -13,3 +13,12 @@ npm run dev
 
 
 Setup Frontend (React)
+npm create vite@latest . -- --template react-ts
+npm i
+npm i axios
+
+
+Install mongodb
+npm install -D @types/mongoose
+mkdir src\models src\routes src\controllers src\config
+on .env MONGO_URI=mongodb://localhost:27017/contract_mgmt
