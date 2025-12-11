@@ -48,10 +48,10 @@ export default function ContractEditPage() {
 
       <ContractForm
         initial={initial}
-        submitLabel="Save Changes"
+        submitLabel="Next"
         onSubmit={async (values) => {
           await updateContract(id, values);
-          nav("/contracts");
+          nav("/contracts/" + id);
         }}
       />
     </div>

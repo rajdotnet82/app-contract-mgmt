@@ -12,10 +12,10 @@ export default function ContractCreatePage() {
       </h1>
 
       <ContractForm
-        submitLabel="Create Contract"
+        submitLabel="Next"
         onSubmit={async (values) => {
-          await createContract(values);
-          nav("/contracts");
+          const data = await createContract(values);
+          nav(`/contracts/${data._id}`);
         }}
       />
     </div>

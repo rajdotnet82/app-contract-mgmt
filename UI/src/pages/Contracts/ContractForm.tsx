@@ -12,11 +12,12 @@ export default function ContractForm({
   submitLabel,
   onSubmit,
 }: Props) {
+  const today = new Date().toISOString().slice(0, 10);
   const [values, setValues] = useState<Partial<Contract>>({
     contractNumber: "",
     clientName: "",
     eventType: "",
-    eventDate: "",
+    eventDate: today,
     status: "Draft",
     totalPrice: 0,
     retainerAmount: 0,

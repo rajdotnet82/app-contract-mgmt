@@ -218,9 +218,16 @@ export default function ContractDetailsPage() {
             Documents
           </h2>
           <button
-            className="cursor-not-allowed rounded-lg bg-gray-200 px-4 py-2 text-gray-500 dark:bg-white/10 dark:text-gray-400"
-            disabled
-            title="Document generation coming soon"
+            className="rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+            onClick={() => {
+              if (!selectedTemplate) {
+                alert("Please select a template first.");
+                return;
+              }
+              alert(
+                "Draft generation UI is enabled. Next step: wire backend save."
+              );
+            }}
           >
             Generate Draft
           </button>
