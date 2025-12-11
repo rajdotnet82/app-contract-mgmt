@@ -34,3 +34,19 @@ export async function deleteTemplate(id: string) {
   const { data } = await http.delete<{ ok: true }>(`/api/templates/${id}`);
   return data;
 }
+
+export async function listTemplates(
+  criteria: { q?: string } = {}
+): Promise<Template[]> {
+  const params = new URLSearchParams();
+
+  if (criteria.q) {
+    params.set("q", criteria.q);
+  }
+
+  const qs = params.toString();
+  const url = qs ? `/api/templates?${qs}` : "/api/templates";
+
+  const { data } = await http.get<Template[]>(url);
+  return data;
+}

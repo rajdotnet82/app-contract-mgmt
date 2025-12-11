@@ -1,3 +1,5 @@
+// UI/src/pages/Contracts/types.ts
+
 export type ContractStatus =
   | "Draft"
   | "Sent"
@@ -10,12 +12,27 @@ export type SearchCriteria = {
   status?: ContractStatus | "";
 };
 
+export type ContractDocumentStatus = "Draft" | "Sent" | "Signed";
+
+export type ContractDocument = {
+  _id?: string;
+  title: string;
+  templateId?: string;
+  contentHtml: string;
+  status: ContractDocumentStatus;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
 export type Contract = {
   _id: string;
 
-  // stable core fields (grid)
+  // core fields
   contractNumber: string;
   clientName: string;
+  clientEmail?: string;
+  clientPhone?: string;
+
   eventType: string;
   eventDate?: string;
   status: ContractStatus;
@@ -23,9 +40,12 @@ export type Contract = {
   retainerAmount?: number;
   signed?: boolean;
 
-  // new flexible architecture
+  // dynamic/template-driven
   templateId?: string;
   details?: Record<string, any>;
+
+  // generated documents (optional, for drafts)
+  documents?: ContractDocument[];
 
   createdAt?: string;
   updatedAt?: string;
