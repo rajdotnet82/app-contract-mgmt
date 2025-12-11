@@ -16,13 +16,13 @@ export async function fetchContracts(criteria: SearchCriteria) {
   return data;
 }
 
-export async function createContract(payload: Partial<Contract>) {
-  const { data } = await http.post<Contract>("/api/contracts", payload);
+export async function getContractById(id: string) {
+  const { data } = await http.get<Contract>(`/api/contracts/${id}`);
   return data;
 }
 
-export async function getContractById(id: string) {
-  const { data } = await http.get<Contract>(`/api/contracts/${id}`);
+export async function createContract(payload: Partial<Contract>) {
+  const { data } = await http.post<Contract>("/api/contracts", payload);
   return data;
 }
 
@@ -32,6 +32,6 @@ export async function updateContract(id: string, payload: Partial<Contract>) {
 }
 
 export async function deleteContract(id: string) {
-  const { data } = await http.delete<{ ok: true }>(`/api/contracts/${id}`);
+  const { data } = await http.delete<{ ok: boolean }>(`/api/contracts/${id}`);
   return data;
 }

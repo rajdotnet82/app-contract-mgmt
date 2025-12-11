@@ -1,23 +1,23 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import ContractForm from "./ContractForm";
-import type { Contract } from "./types";
-import { getContractById, updateContract } from "./api";
+import TemplateForm from "./TemplateForm";
+import type { Template } from "./types";
+import { getTemplateById, updateTemplate } from "./api";
 
-export default function ContractEditPage() {
+export default function TemplateEditPage() {
   const { id } = useParams();
   const nav = useNavigate();
-  const [initial, setInitial] = useState<Partial<Contract> | null>(null);
+  const [initial, setInitial] = useState<Partial<Template> | null>(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
     (async () => {
       try {
         if (!id) return;
-        const data = await getContractById(id);
+        const data = await getTemplateById(id);
         setInitial(data);
       } catch {
-        setError("Failed to load contract");
+        setError("Failed to load template");
       }
     })();
   }, [id]);
@@ -43,15 +43,15 @@ export default function ContractEditPage() {
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-semibold text-black dark:text-white">
-        Edit Contract
+        Edit Template
       </h1>
 
-      <ContractForm
+      <TemplateForm
         initial={initial}
         submitLabel="Save Changes"
         onSubmit={async (values) => {
-          await updateContract(id, values);
-          nav("/contracts");
+          await updateTemplate(id, values);
+          nav("/templates");
         }}
       />
     </div>

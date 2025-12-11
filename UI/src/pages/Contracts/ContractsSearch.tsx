@@ -17,19 +17,19 @@ type Props = {
 export default function ContractsSearch({ value, onChange, onClear }: Props) {
   return (
     <div className="mb-6 rounded-2xl border border-stroke bg-white p-4 shadow-default dark:border-strokedark dark:bg-boxdark">
-      <div className="grid gap-3 md:grid-cols-3">
+      <div className="flex flex-wrap items-center gap-3">
         <input
-          className="w-full rounded-lg border border-stroke bg-transparent px-3 py-2 outline-none focus:border-primary dark:border-strokedark"
-          placeholder="Search client, contract #, event type..."
+          className="w-full md:w-96 rounded-lg border border-stroke bg-transparent px-3 py-2 outline-none focus:border-blue-500 dark:border-strokedark"
+          placeholder="Search by client, contract #, event..."
           value={value.q}
           onChange={(e) => onChange({ ...value, q: e.target.value })}
         />
 
         <select
-          className="w-full rounded-lg border border-stroke bg-transparent px-3 py-2 outline-none focus:border-primary dark:border-strokedark"
+          className="w-full md:w-56 rounded-lg border border-stroke bg-transparent px-3 py-2 outline-none focus:border-blue-500 dark:border-strokedark"
           value={value.status ?? ""}
           onChange={(e) =>
-            onChange({ ...value, status: e.target.value as any })
+            onChange({ ...value, status: e.currentTarget.value as any })
           }
         >
           <option value="">All Status</option>
@@ -40,22 +40,13 @@ export default function ContractsSearch({ value, onChange, onClear }: Props) {
           ))}
         </select>
 
-        <div className="flex gap-2">
-          <button
-            className="rounded-lg bg-blue-600 px-6 py-2 text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
-            type="button"
-            onClick={() => onChange({ ...value })}
-          >
-            Search
-          </button>
-          <button
-            className="rounded-lg bg-blue-600 px-6 py-2 text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600"
-            type="button"
-            onClick={onClear}
-          >
-            Clear
-          </button>
-        </div>
+        <button
+          type="button"
+          className="rounded-lg border border-stroke px-4 py-2 dark:border-strokedark"
+          onClick={onClear}
+        >
+          Clear
+        </button>
       </div>
     </div>
   );

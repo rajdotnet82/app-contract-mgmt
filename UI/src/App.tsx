@@ -21,6 +21,10 @@ import Home from "./pages/Dashboard/Home";
 import ContractsPage from "./pages/Contracts/ContractsPage";
 import ContractCreatePage from "./pages/Contracts/ContractCreatePage";
 import ContractEditPage from "./pages/Contracts/ContractEditPage";
+import ContractDetailsPage from "./pages/Contracts/ContractDetailsPage";
+import TemplatesPage from "./pages/Templates/TemplatesPage";
+import TemplateCreatePage from "./pages/Templates/TemplateCreatePage";
+import TemplateEditPage from "./pages/Templates/TemplateEditPage";
 
 export default function App() {
   return (
@@ -35,6 +39,10 @@ export default function App() {
             <Route path="/contracts" element={<ContractsPage />} />
             <Route path="/contracts/new" element={<ContractCreatePage />} />
             <Route path="/contracts/:id/edit" element={<ContractEditPage />} />
+            <Route path="/contracts/:id" element={<ContractDetailsPage />} />
+            <Route path="/templates" element={<TemplatesPage />} />
+            <Route path="/templates/new" element={<TemplateCreatePage />} />
+            <Route path="/templates/:id/edit" element={<TemplateEditPage />} />
 
             {/* Others Page */}
             <Route path="/profile" element={<UserProfiles />} />

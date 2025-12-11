@@ -3,6 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import contractsRouter from "./src/routes/contracts";
 import { connectDb } from "./src/config/db";
+import templatesRouter from "./src/routes/templates";
 
 dotenv.config();
 
@@ -16,6 +17,7 @@ app.get("/health", (req, res) => {
 });
 
 app.use("/api/contracts", contractsRouter);
+app.use("/api/templates", templatesRouter);
 
 const PORT = Number(process.env.PORT) || 5000;
 

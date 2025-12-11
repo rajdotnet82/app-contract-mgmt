@@ -5,22 +5,28 @@ export type ContractStatus =
   | "Completed"
   | "Cancelled";
 
+export type SearchCriteria = {
+  q: string;
+  status?: ContractStatus | "";
+};
+
 export type Contract = {
   _id: string;
+
+  // stable core fields (grid)
   contractNumber: string;
   clientName: string;
   eventType: string;
   eventDate?: string;
   status: ContractStatus;
-  packageName?: string;
-  totalPrice: number;
-  retainerAmount: number;
-  signed: boolean;
+  totalPrice?: number;
+  retainerAmount?: number;
+  signed?: boolean;
+
+  // new flexible architecture
+  templateId?: string;
+  details?: Record<string, any>;
+
   createdAt?: string;
   updatedAt?: string;
-};
-
-export type SearchCriteria = {
-  q: string;
-  status?: ContractStatus | "";
 };

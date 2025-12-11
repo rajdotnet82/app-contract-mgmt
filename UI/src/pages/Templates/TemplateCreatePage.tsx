@@ -1,21 +1,21 @@
 import { useNavigate } from "react-router-dom";
-import ContractForm from "./ContractForm";
-import { createContract } from "./api";
+import TemplateForm from "./TemplateForm";
+import { createTemplate } from "./api";
 
-export default function ContractCreatePage() {
+export default function TemplateCreatePage() {
   const nav = useNavigate();
 
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-semibold text-black dark:text-white">
-        Add Contract
+        Add Template
       </h1>
 
-      <ContractForm
-        submitLabel="Create Contract"
+      <TemplateForm
+        submitLabel="Create Template"
         onSubmit={async (values) => {
-          await createContract(values);
-          nav("/contracts");
+          await createTemplate(values);
+          nav("/templates");
         }}
       />
     </div>

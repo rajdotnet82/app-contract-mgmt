@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import ContractsSearch from "./ContractsSearch";
 import ContractsResults from "./ContractsResults";
-import type { Contract, SearchCriteria } from "./types";
-import { fetchContracts, deleteContract } from "./api";
+import type { Contract, SearchCriteria, ContractStatus } from "./types";
+import { fetchContracts, deleteContract, updateContract } from "./api";
 
 export default function ContractsPage() {
   const [criteria, setCriteria] = useState<SearchCriteria>({
@@ -35,6 +35,11 @@ export default function ContractsPage() {
     await load(criteria);
   }
 
+  async function handleStatusChange(id: string, status: ContractStatus) {
+    await updateContract(id, { status });
+    await load(criteria);
+  }
+
   return (
     <div>
       <ContractsSearch
@@ -48,6 +53,7 @@ export default function ContractsPage() {
         loading={loading}
         error={error}
         onDelete={handleDelete}
+        onStatusChange={handleStatusChange}
       />
     </div>
   );
