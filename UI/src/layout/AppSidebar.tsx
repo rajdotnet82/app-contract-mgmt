@@ -15,6 +15,7 @@ import {
   TableIcon,
   ContractIcon,
   UserCircleIcon,
+  UserIcon,
 } from "../icons";
 import { useSidebar } from "../context/SidebarContext";
 import SidebarWidget from "./SidebarWidget";
@@ -41,6 +42,11 @@ const navItems: NavItem[] = [
     icon: <PageIcon />,
     name: "Templates",
     path: "/templates",
+  },
+  {
+    icon: <UserIcon />,
+    name: "Clients",
+    path: "/clients",
   },
   {
     icon: <CalenderIcon />,

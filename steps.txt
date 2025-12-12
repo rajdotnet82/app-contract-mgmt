@@ -89,3 +89,8 @@ Policies
 {{policy.lodgingThresholdTime}}
 
 {{legal.governingState}}
+
+----------------
+Client Management
+Invoice Management
+Payment Management

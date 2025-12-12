@@ -25,6 +25,10 @@ import ContractDetailsPage from "./pages/Contracts/ContractDetailsPage";
 import TemplatesPage from "./pages/Templates/TemplatesPage";
 import TemplateCreatePage from "./pages/Templates/TemplateCreatePage";
 import TemplateEditPage from "./pages/Templates/TemplateEditPage";
+import ClientsPage from "./pages/Clients/ClientsPage";
+import ClientCreatePage from "./pages/Clients/ClientCreatePage";
+import ClientEditPage from "./pages/Clients/ClientEditPage";
+import ClientDetailsPage from "./pages/Clients/ClientDetailsPage";
 
 export default function App() {
   return (
@@ -43,6 +47,10 @@ export default function App() {
             <Route path="/templates" element={<TemplatesPage />} />
             <Route path="/templates/new" element={<TemplateCreatePage />} />
             <Route path="/templates/:id/edit" element={<TemplateEditPage />} />
+            <Route path="/clients" element={<ClientsPage />} />
+            <Route path="/clients/new" element={<ClientCreatePage />} />
+            <Route path="/clients/:id" element={<ClientDetailsPage />} />
+            <Route path="/clients/:id/edit" element={<ClientEditPage />} />
 
             {/* Others Page */}
             <Route path="/profile" element={<UserProfiles />} />
