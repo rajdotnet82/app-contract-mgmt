@@ -5,7 +5,6 @@ import { Link, useLocation } from "react-router";
 import {
   /*BoxCubeIcon,
   CalenderIcon,
-  UserCircleIcon,
   PieChartIcon,
   PlugInIcon,
   TableIcon,
@@ -18,6 +17,7 @@ import {
   ContractIcon,
   UserIcon,
   DollarLineIcon,
+  UserCircleIcon,
 } from "../icons";
 import { useSidebar } from "../context/SidebarContext";
 // import SidebarWidget from "./SidebarWidget";
@@ -55,15 +55,15 @@ const navItems: NavItem[] = [
     name: "Invoices",
     path: "/invoices",
   },
-  /*{
-    icon: <CalenderIcon />,
-    name: "Calendar",
-    path: "/calendar",
-  },
   {
     icon: <UserCircleIcon />,
     name: "User Profile",
     path: "/profile",
+  },
+  /*{
+    icon: <CalenderIcon />,
+    name: "Calendar",
+    path: "/calendar",
   },
   {
     name: "Forms",
