@@ -29,6 +29,9 @@ import ClientsPage from "./pages/Clients/ClientsPage";
 import ClientCreatePage from "./pages/Clients/ClientCreatePage";
 import ClientEditPage from "./pages/Clients/ClientEditPage";
 import ClientDetailsPage from "./pages/Clients/ClientDetailsPage";
+import InvoicesPage from "./pages/Invoices/InvoicesPage";
+import InvoiceDetailsPage from "./pages/Invoices/InvoicesPage";
+import InvoiceCreatePage from "./pages/Invoices/InvoiceCreatePage";
 
 export default function App() {
   return (
@@ -51,6 +54,10 @@ export default function App() {
             <Route path="/clients/new" element={<ClientCreatePage />} />
             <Route path="/clients/:id" element={<ClientDetailsPage />} />
             <Route path="/clients/:id/edit" element={<ClientEditPage />} />
+
+            <Route path="/invoices" element={<InvoicesPage />} />
+            <Route path="/invoices/new" element={<InvoiceCreatePage />} />
+            <Route path="/invoices/:id" element={<InvoiceDetailsPage />} />
 
             {/* Others Page */}
             <Route path="/profile" element={<UserProfiles />} />

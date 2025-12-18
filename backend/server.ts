@@ -5,6 +5,7 @@ import contractsRouter from "./src/routes/contracts";
 import { connectDb } from "./src/config/db";
 import templatesRouter from "./src/routes/templates";
 import clientsRouter from "./src/routes/clients"; 
+import invoicesRouter from "./src/routes/invoices"; 
 
 dotenv.config();
 
@@ -20,6 +21,7 @@ app.get("/health", (req, res) => {
 app.use("/api/contracts", contractsRouter);
 app.use("/api/templates", templatesRouter);
 app.use("/api/clients", clientsRouter);
+app.use("/api/invoices", invoicesRouter);
 
 const PORT = Number(process.env.PORT) || 5000;
 
