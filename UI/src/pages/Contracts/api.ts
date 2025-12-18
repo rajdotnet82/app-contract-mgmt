@@ -1,5 +1,5 @@
 import axios from "axios";
-import type { Contract, SearchCriteria, Template } from "./types";
+import type { Contract, SearchCriteria } from "./types";
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? "http://localhost:5000";
 

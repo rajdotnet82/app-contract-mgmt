@@ -59,3 +59,4 @@ backend/dist/
 # (ignore if you use local Mongo files inside repo)
 # =========================
 data/
+steps.txt

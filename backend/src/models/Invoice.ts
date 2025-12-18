@@ -1,0 +1,141 @@
+import mongoose, { Schema, Document } from "mongoose";
+
+export type InvoiceStatus = "Draft" | "Sent" | "Paid" | "Void";
+
+export interface InvoiceLineItem {
+  description: string; // multi-line ok
+  rate: number;        // e.g., 200
+  qty: number;         // e.g., 2
+  amount: number;      // rate * qty (stored for convenience)
+}
+
+export interface InvoiceParty {
+  name: string;
+  email?: string;
+  phone?: string;
+  addressLine1?: string;
+  addressLine2?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+  country?: string;
+  businessNumber?: string; // optional
+  logoUrl?: string;        // mainly for "From"
+}
+
+export interface InvoiceActivityEntry {
+  type:
+    | "Created"
+    | "Updated"
+    | "StatusChanged"
+    | "Emailed"
+    | "PdfGenerated"
+    | "PaymentRecorded";
+  message?: string;
+  at?: Date;
+}
+
+export interface Invoice extends Document {
+  number: string; // INV3120
+  status: InvoiceStatus;
+
+  currency: string; // "USD"
+  invoiceDate: Date;
+  dueDate?: Date;
+  terms?: string; // e.g. "5 days"
+
+  from: InvoiceParty;
+  billTo: InvoiceParty;
+
+  lineItems: InvoiceLineItem[];
+
+  taxPercent?: number; // e.g. 0 or 7.5
+  subtotal: number;
+  taxAmount: number;
+  total: number;
+
+  paidAmount: number;
+  balanceDue: number;
+
+  notes?: string; // payment instructions footer
+
+  activity: InvoiceActivityEntry[];
+
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+const LineItemSchema = new Schema<InvoiceLineItem>(
+  {
+    description: { type: String, required: true, trim: true },
+    rate: { type: Number, required: true, min: 0 },
+    qty: { type: Number, required: true, min: 0 },
+    amount: { type: Number, required: true, min: 0 },
+  },
+  { _id: false }
+);
+
+const PartySchema = new Schema<InvoiceParty>(
+  {
+    name: { type: String, required: true, trim: true },
+    email: { type: String, trim: true },
+    phone: { type: String, trim: true },
+    addressLine1: { type: String, trim: true },
+    addressLine2: { type: String, trim: true },
+    city: { type: String, trim: true },
+    state: { type: String, trim: true },
+    postalCode: { type: String, trim: true },
+    country: { type: String, trim: true },
+    businessNumber: { type: String, trim: true },
+    logoUrl: { type: String, trim: true },
+  },
+  { _id: false }
+);
+
+const ActivitySchema = new Schema<InvoiceActivityEntry>(
+  {
+    type: { type: String, required: true },
+    message: { type: String, trim: true },
+    at: { type: Date, default: () => new Date() },
+  },
+  { _id: false }
+);
+
+const InvoiceSchema = new Schema<Invoice>(
+  {
+    number: { type: String, required: true, trim: true, unique: true },
+
+    status: {
+      type: String,
+      enum: ["Draft", "Sent", "Paid", "Void"],
+      default: "Draft",
+    },
+
+    currency: { type: String, default: "USD", trim: true },
+
+    invoiceDate: { type: Date, required: true },
+    dueDate: { type: Date },
+    terms: { type: String, trim: true },
+
+    from: { type: PartySchema, required: true },
+    billTo: { type: PartySchema, required: true },
+
+    lineItems: { type: [LineItemSchema], default: [] },
+
+    taxPercent: { type: Number, default: 0, min: 0 },
+
+    subtotal: { type: Number, required: true, min: 0, default: 0 },
+    taxAmount: { type: Number, required: true, min: 0, default: 0 },
+    total: { type: Number, required: true, min: 0, default: 0 },
+
+    paidAmount: { type: Number, required: true, min: 0, default: 0 },
+    balanceDue: { type: Number, required: true, min: 0, default: 0 },
+
+    notes: { type: String },
+
+    activity: { type: [ActivitySchema], default: [] },
+  },
+  { timestamps: true }
+);
+
+export default mongoose.model<Invoice>("Invoice", InvoiceSchema);

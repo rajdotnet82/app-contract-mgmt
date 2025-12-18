@@ -3,21 +3,24 @@ import { Link, useLocation } from "react-router";
 
 // Assume these icons are imported from an icon library
 import {
-  BoxCubeIcon,
+  /*BoxCubeIcon,
   CalenderIcon,
-  ChevronDownIcon,
-  GridIcon,
-  HorizontaLDots,
-  ListIcon,
-  PageIcon,
+  UserCircleIcon,
   PieChartIcon,
   PlugInIcon,
   TableIcon,
+  ListIcon,*/
+
+  ChevronDownIcon,
+  GridIcon,
+  HorizontaLDots,
+  PageIcon,
   ContractIcon,
-  UserCircleIcon,
+  UserIcon,
+  DollarLineIcon,
 } from "../icons";
 import { useSidebar } from "../context/SidebarContext";
-import SidebarWidget from "./SidebarWidget";
+// import SidebarWidget from "./SidebarWidget";
 
 type NavItem = {
   name: string;
@@ -43,6 +46,16 @@ const navItems: NavItem[] = [
     path: "/templates",
   },
   {
+    icon: <UserIcon />,
+    name: "Clients",
+    path: "/clients",
+  },
+  {
+    icon: <DollarLineIcon />,
+    name: "Invoices",
+    path: "/invoices",
+  },
+  /*{
     icon: <CalenderIcon />,
     name: "Calendar",
     path: "/calendar",
@@ -69,10 +82,11 @@ const navItems: NavItem[] = [
       { name: "Blank Page", path: "/blank", pro: false },
       { name: "404 Error", path: "/error-404", pro: false },
     ],
-  },
+  },*/
 ];
 
-const othersItems: NavItem[] = [
+const othersItems: NavItem[] = [];
+/*const othersItems: NavItem[] = [
   {
     icon: <PieChartIcon />,
     name: "Charts",
@@ -101,7 +115,7 @@ const othersItems: NavItem[] = [
       { name: "Sign Up", path: "/signup", pro: false },
     ],
   },
-];
+];*/
 
 const AppSidebar: React.FC = () => {
   const { isExpanded, isMobileOpen, isHovered, setIsHovered } = useSidebar();
@@ -361,7 +375,7 @@ const AppSidebar: React.FC = () => {
               </h2>
               {renderMenuItems(navItems, "main")}
             </div>
-            <div className="">
+            {/* <div className="">
               <h2
                 className={`mb-4 text-xs uppercase flex leading-[20px] text-gray-400 ${
                   !isExpanded && !isHovered
@@ -376,10 +390,10 @@ const AppSidebar: React.FC = () => {
                 )}
               </h2>
               {renderMenuItems(othersItems, "others")}
-            </div>
+            </div> */}
           </div>
         </nav>
-        {isExpanded || isHovered || isMobileOpen ? <SidebarWidget /> : null}
+        {/* {isExpanded || isHovered || isMobileOpen ? <SidebarWidget /> : null} */}
       </div>
     </aside>
   );
