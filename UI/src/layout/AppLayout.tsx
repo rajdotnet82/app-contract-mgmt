@@ -9,7 +9,7 @@ const LayoutContent: React.FC = () => {
 
   return (
     <div className="min-h-screen xl:flex">
-      <div>
+      <div className="dark">
         <AppSidebar />
         <Backdrop />
       </div>
