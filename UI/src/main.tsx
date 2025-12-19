@@ -28,7 +28,9 @@ createRoot(document.getElementById("root")!).render(
           domain={auth0Domain}
           clientId={auth0ClientId}
           authorizationParams={{
-            redirect_uri: `${window.location.origin}`,
+            redirect_uri: window.location.origin,
+            audience: import.meta.env.VITE_AUTH0_AUDIENCE,
+            scope: "openid profile email",
           }}
           cacheLocation="localstorage"
           useRefreshTokens={true}

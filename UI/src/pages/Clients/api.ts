@@ -1,11 +1,5 @@
 import { Client, SearchCriteria } from "./types";
-import axios from "axios";
-
-const API_BASE = import.meta.env.VITE_API_BASE ?? "http://localhost:5000";
-
-const http = axios.create({
-  baseURL: API_BASE,
-});
+import http from "../../api/http";
 
 export async function listClients(
   criteria: Partial<SearchCriteria> = {}

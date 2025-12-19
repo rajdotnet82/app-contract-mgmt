@@ -31,10 +31,33 @@ import InvoicesPage from "./pages/Invoices/InvoicesPage";
 import InvoiceDetailsPage from "./pages/Invoices/InvoicesPage";
 import InvoiceCreatePage from "./pages/Invoices/InvoiceCreatePage";
 import RequireAuth from "./components/auth/RequireAuth";
+import { setTokenGetter } from "./components/auth/token";
+import { useEffect } from "react";
+import { useAuth0 } from "@auth0/auth0-react";
+
+export function TokenBootstrap() {
+  const { isAuthenticated, getAccessTokenSilently } = useAuth0();
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+
+    setTokenGetter(() =>
+      getAccessTokenSilently({
+        authorizationParams: {
+          audience: import.meta.env.VITE_AUTH0_AUDIENCE,
+          scope: "openid profile email",
+        },
+      })
+    );
+  }, [isAuthenticated, getAccessTokenSilently]);
+
+  return null;
+}
 
 export default function App() {
   return (
     <>
+      <TokenBootstrap />
       <Router>
         <ScrollToTop />
         <Routes>

@@ -1,11 +1,5 @@
-import axios from "axios";
+import http from "../../api/http";
 import type { Contract, SearchCriteria } from "./types";
-
-const API_BASE = import.meta.env.VITE_API_BASE ?? "http://localhost:5000";
-
-const http = axios.create({
-  baseURL: API_BASE,
-});
 
 export async function fetchContracts(criteria: SearchCriteria) {
   const params: any = {};
