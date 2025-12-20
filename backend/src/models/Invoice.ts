@@ -1,4 +1,4 @@
-import mongoose, { Schema, Document } from "mongoose";
+import mongoose, { Schema, Document, Types } from "mongoose";
 
 export type InvoiceStatus = "Draft" | "Sent" | "Paid" | "Void";
 
@@ -20,36 +20,38 @@ export interface InvoiceParty {
   postalCode?: string;
   country?: string;
   businessNumber?: string; // optional
-  logoUrl?: string;        // mainly for "From"
+  logoUrl?: string;        // optional (but you’ll mostly use Organization.logoUrl)
 }
 
 export interface InvoiceActivityEntry {
-  type:
-    | "Created"
-    | "Updated"
-    | "StatusChanged"
-    | "Emailed"
-    | "PdfGenerated"
-    | "PaymentRecorded";
+  type: "Created" | "Updated" | "StatusChanged" | "Emailed" | "PdfGenerated" | "PaymentRecorded";
   message?: string;
   at?: Date;
 }
 
 export interface Invoice extends Document {
-  number: string; // INV3120
+  // Multi-tenant scoping
+  orgId?: Types.ObjectId;
+
+  // Links
+  fromUserId?: Types.ObjectId;
+  clientId?: Types.ObjectId;
+
+  number: string;
   status: InvoiceStatus;
 
   currency: string; // "USD"
   invoiceDate: Date;
   dueDate?: Date;
-  terms?: string; // e.g. "5 days"
+  terms?: string;
 
+  // Snapshots
   from: InvoiceParty;
   billTo: InvoiceParty;
 
   lineItems: InvoiceLineItem[];
 
-  taxPercent?: number; // e.g. 0 or 7.5
+  taxPercent?: number;
   subtotal: number;
   taxAmount: number;
   total: number;
@@ -57,7 +59,7 @@ export interface Invoice extends Document {
   paidAmount: number;
   balanceDue: number;
 
-  notes?: string; // payment instructions footer
+  notes?: string;
 
   activity: InvoiceActivityEntry[];
 
@@ -70,7 +72,8 @@ const LineItemSchema = new Schema<InvoiceLineItem>(
     description: { type: String, required: true, trim: true },
     rate: { type: Number, required: true, min: 0 },
     qty: { type: Number, required: true, min: 0 },
-    amount: { type: Number, required: true, min: 0 },
+    // ✅ not required — server can compute; prevents validation failures if UI forgets to send it
+    amount: { type: Number, min: 0, default: 0 },
   },
   { _id: false }
 );
@@ -103,7 +106,12 @@ const ActivitySchema = new Schema<InvoiceActivityEntry>(
 
 const InvoiceSchema = new Schema<Invoice>(
   {
-    number: { type: String, required: true, trim: true, unique: true },
+    orgId: { type: Schema.Types.ObjectId, ref: "Organization", index: true },
+
+    fromUserId: { type: Schema.Types.ObjectId, ref: "User", index: true },
+    clientId: { type: Schema.Types.ObjectId, ref: "Client", index: true },
+
+    number: { type: String, required: true, trim: true },
 
     status: {
       type: String,
@@ -137,5 +145,16 @@ const InvoiceSchema = new Schema<Invoice>(
   },
   { timestamps: true }
 );
+
+// ✅ Uniqueness within org (keeps legacy invoices without orgId unaffected)
+InvoiceSchema.index(
+  { orgId: 1, number: 1 },
+  { unique: true, partialFilterExpression: { orgId: { $exists: true } } }
+);
+
+// ✅ Helpful indexes for list/sort screens
+InvoiceSchema.index({ orgId: 1, createdAt: -1 });
+InvoiceSchema.index({ orgId: 1, invoiceDate: -1 });
+InvoiceSchema.index({ orgId: 1, status: 1, dueDate: 1 });
 
 export default mongoose.model<Invoice>("Invoice", InvoiceSchema);

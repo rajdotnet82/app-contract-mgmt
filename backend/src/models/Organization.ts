@@ -1,12 +1,16 @@
-import mongoose, { Schema, InferSchemaType } from "mongoose";
+import mongoose, { Schema, Document } from "mongoose";
 
-const OrganizationSchema = new Schema(
+export interface Organization extends Document {
+  name: string;
+  logoUrl?: string;
+}
+
+const OrganizationSchema = new Schema<Organization>(
   {
     name: { type: String, required: true, trim: true },
-    createdByUserId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    logoUrl: { type: String, trim: true },
   },
   { timestamps: true }
 );
 
-export type Organization = InferSchemaType<typeof OrganizationSchema>;
-export default mongoose.model("Organization", OrganizationSchema);
+export default mongoose.model<Organization>("Organization", OrganizationSchema);
