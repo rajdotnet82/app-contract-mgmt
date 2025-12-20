@@ -776,3 +776,18 @@ span.flatpickr-weekday,
 .simplebar-scrollbar.simplebar-visible:before {
   @apply opacity-100;
 }
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  /* Optional: remove extra page padding/margins if needed */
+  body {
+    background: white !important;
+  }
+
+  #app-sidebar, #app-navbar, header {
+    display: none !important;
+  }
+}

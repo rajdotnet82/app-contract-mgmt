@@ -28,12 +28,12 @@ import ClientCreatePage from "./pages/Clients/ClientCreatePage";
 import ClientEditPage from "./pages/Clients/ClientEditPage";
 import ClientDetailsPage from "./pages/Clients/ClientDetailsPage";
 import InvoicesPage from "./pages/Invoices/InvoicesPage";
-import InvoiceDetailsPage from "./pages/Invoices/InvoicesPage";
 import InvoiceCreatePage from "./pages/Invoices/InvoiceCreatePage";
 import RequireAuth from "./components/auth/RequireAuth";
 import { setTokenGetter } from "./components/auth/token";
 import { useEffect } from "react";
 import { useAuth0 } from "@auth0/auth0-react";
+import InvoiceDetailsPage from "./pages/Invoices/InvoiceDetailsPage";
 
 export function TokenBootstrap() {
   const { isAuthenticated, getAccessTokenSilently } = useAuth0();

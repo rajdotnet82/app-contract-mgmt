@@ -30,6 +30,11 @@ export type InvoiceParty = {
 
 export type Invoice = {
   _id: string;
+
+  // Optional links used by dropdown auto-populate
+  fromUserId?: string;
+  clientId?: string;
+
   number: string;
   status: InvoiceStatus;
 

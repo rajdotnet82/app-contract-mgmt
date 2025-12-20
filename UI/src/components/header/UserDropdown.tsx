@@ -3,13 +3,14 @@ import { DropdownItem } from "../ui/dropdown/DropdownItem";
 import { Dropdown } from "../ui/dropdown/Dropdown";
 import { Link } from "react-router";
 import { useAuth0 } from "@auth0/auth0-react";
+import Avatar from "../common/Avatar"; // ✅ adjust this path if needed
 
 export default function UserDropdown() {
   const [isOpen, setIsOpen] = useState(false);
   const { isAuthenticated, user, logout } = useAuth0();
 
   function toggleDropdown() {
-    setIsOpen(!isOpen);
+    setIsOpen((v) => !v);
   }
 
   function closeDropdown() {
@@ -18,7 +19,6 @@ export default function UserDropdown() {
 
   const displayName = user?.name || user?.nickname || user?.email || "User";
   const displayEmail = user?.email || "";
-  const displayPicture = user?.picture || "/images/user/owner.jpg";
 
   const handleSignOut = () => {
     closeDropdown();
@@ -29,8 +29,6 @@ export default function UserDropdown() {
     });
   };
 
-  // Optional: if not authenticated, you can hide the dropdown entirely
-  // or show a Sign in link/button. Keeping it simple: show Sign in.
   if (!isAuthenticated) {
     return (
       <Link
@@ -47,14 +45,16 @@ export default function UserDropdown() {
       <button
         onClick={toggleDropdown}
         className="flex items-center text-gray-700 dropdown-toggle dark:text-gray-400"
+        type="button"
       >
         <span className="mr-3 overflow-hidden rounded-full h-11 w-11">
-          <img src={displayPicture} alt="User" />
+          <Avatar src={user?.picture} alt={displayName} size={44} />
         </span>
 
         <span className="block mr-1 font-medium text-theme-sm">
           {displayName}
         </span>
+
         <svg
           className={`stroke-gray-500 dark:stroke-gray-400 transition-transform duration-200 ${
             isOpen ? "rotate-180" : ""

@@ -18,12 +18,14 @@
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
     "express-oauth2-jwt-bearer": "^1.7.2",
-    "mongoose": "^9.0.1"
+    "mongoose": "^9.0.1",
+    "multer": "^2.0.2"
   },
   "devDependencies": {
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
     "@types/mongoose": "^5.11.96",
+    "@types/multer": "^2.0.0",
     "@types/node": "^24.10.2",
     "nodemon": "^3.1.11",
     "ts-node": "^10.9.2",

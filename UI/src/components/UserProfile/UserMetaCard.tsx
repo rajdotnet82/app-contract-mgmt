@@ -8,16 +8,17 @@ import Button from "../ui/button/Button";
 import Label from "../form/Label";
 import Input from "../form/input/InputField";
 import http from "../../api/http";
+import Avatar from "../common/Avatar";
 
 type OrgSummary = { id: string; name: string; role: string };
 
 type Address = {
-  line1: string;
-  line2: string;
-  city: string;
-  state: string;
-  postalCode: string;
-  country: string;
+  line1?: string;
+  line2?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+  country?: string;
 };
 
 type MeUser = {
@@ -29,6 +30,9 @@ type MeUser = {
   locale?: string;
   address?: Address;
   activeOrgId?: string;
+
+  // If you add this later in your DB user profile:
+  avatarUrl?: string;
 };
 
 type MeResponse = {
@@ -63,6 +67,7 @@ export default function UserMetaData() {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const [me, setMe] = useState<MeUser | null>(null);
   const [orgs, setOrgs] = useState<OrgSummary[]>([]);
@@ -83,19 +88,25 @@ export default function UserMetaData() {
       (auth0User?.name as string | undefined) ||
       (auth0User?.nickname as string | undefined) ||
       me?.email ||
+      (auth0User?.email as string | undefined) ||
       "User"
     );
-  }, [me?.fullName, me?.email, auth0User?.name, auth0User?.nickname]);
+  }, [
+    me?.fullName,
+    me?.email,
+    auth0User?.name,
+    auth0User?.nickname,
+    auth0User?.email,
+  ]);
 
   const displayEmail = useMemo(() => {
     return me?.email || (auth0User?.email as string | undefined) || "";
   }, [me?.email, auth0User?.email]);
 
-  const displayPicture = useMemo(() => {
-    return (
-      (auth0User?.picture as string | undefined) || "/images/user/owner.jpg"
-    );
-  }, [auth0User?.picture]);
+  const avatarSrc = useMemo(() => {
+    // Prefer your DB avatarUrl if you add it; else fallback to Auth0 picture.
+    return me?.avatarUrl || (auth0User?.picture as string | undefined) || "";
+  }, [me?.avatarUrl, auth0User?.picture]);
 
   async function load() {
     const { data } = await http.get<MeResponse>("/api/me");
@@ -112,7 +123,12 @@ export default function UserMetaData() {
   useEffect(() => {
     (async () => {
       try {
+        setError(null);
         await load();
+      } catch (e: any) {
+        setError(
+          e?.response?.data?.error ?? e?.message ?? "Failed to load profile"
+        );
       } finally {
         setLoading(false);
       }
@@ -134,9 +150,11 @@ export default function UserMetaData() {
   async function save() {
     if (!me) return;
     setSaving(true);
+    setError(null);
+
     try {
       const payload = {
-        fullName,
+        fullName: (fullName || "").trim(),
         locale,
       };
 
@@ -146,6 +164,10 @@ export default function UserMetaData() {
       );
       setMe(data.user);
       closeModal();
+    } catch (e: any) {
+      setError(
+        e?.response?.data?.error ?? e?.message ?? "Failed to save profile"
+      );
     } finally {
       setSaving(false);
     }
@@ -156,11 +178,13 @@ export default function UserMetaData() {
       <div className="rounded-2xl border border-gray-200 p-5 dark:border-gray-800 lg:p-6">
         <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-4">
-            <img
-              src={displayPicture}
-              alt="avatar"
-              className="h-14 w-14 rounded-full object-cover"
+            <Avatar
+              src={avatarSrc}
+              alt={displayName}
+              size={72}
+              className="border border-gray-200"
             />
+
             <div>
               <h4 className="text-base font-semibold text-gray-800 dark:text-white/90">
                 {displayName}
@@ -202,6 +226,12 @@ export default function UserMetaData() {
         {loading ? (
           <div className="mt-4 text-sm text-gray-500 dark:text-gray-400">
             Loading…
+          </div>
+        ) : null}
+
+        {error ? (
+          <div className="mt-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950/40 dark:text-red-200">
+            {error}
           </div>
         ) : null}
       </div>

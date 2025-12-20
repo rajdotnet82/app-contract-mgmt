@@ -57,7 +57,7 @@ export default function InvoiceDetailsPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex items-center justify-between gap-3 no-print">
         <div className="flex items-center gap-3">
           <Link
             to="/invoices"
@@ -90,13 +90,6 @@ export default function InvoiceDetailsPage() {
             title="Print/PDF (basic)"
           >
             PDF
-          </button>
-
-          <button
-            className="rounded-lg bg-blue-600 px-3 py-2 text-sm text-white hover:bg-blue-700"
-            onClick={() => alert("Email invoice: coming next")}
-          >
-            Email Invoice
           </button>
         </div>
       </div>
