@@ -1,21 +1,37 @@
 import { Router } from "express";
 import Organization from "../models/Organization";
 import UserOrganization from "../models/UserOrganization";
-import User from "../models/User";
 
 const router = Router();
 
-router.post("/", async (req, res) => {
+function isOrgAdmin(role?: string) {
+  return role === "Owner" || role === "Admin";
+}
+
+router.put("/:orgId", async (req, res) => {
+  const { orgId } = req.params;
   const name = String(req.body?.name ?? "").trim();
   if (name.length < 2) return res.status(400).json({ error: "name is required" });
 
-  const org = await Organization.create({ name, createdByUserId: req.userId });
-  await UserOrganization.create({ userId: req.userId, orgId: org._id, role: "Owner" });
+  const membership = await UserOrganization.findOne({
+    userId: req.userId,
+    orgId,
+  }).lean();
 
-  // make it active immediately
-  await User.updateOne({ _id: req.userId }, { $set: { activeOrgId: org._id } });
+  const role = membership?.role;
+  const isAdmin = role === "Owner" || role === "Admin";
 
-  res.json({ org: { id: String(org._id), name: org.name } });
+  if (!membership || !isAdmin) {
+    return res.status(403).json({ error: "Admin access required" });
+  }
+
+  const org = await Organization.findByIdAndUpdate(
+    orgId,
+    { $set: { name } },
+    { new: true }
+  ).lean();
+
+  return res.json({ ok: true, org: { id: String(org?._id), name: org?.name ?? "" } });
 });
 
 export default router;
