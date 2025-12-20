@@ -6,6 +6,10 @@ import { connectDb } from "./src/config/db";
 import templatesRouter from "./src/routes/templates";
 import clientsRouter from "./src/routes/clients"; 
 import invoicesRouter from "./src/routes/invoices"; 
+import { requireAuth } from "./src/middleware/auth";
+import { attachContext } from "./src/middleware/context";
+import meRouter from "./src/routes/me";
+import orgsRouter from "./src/routes/orgs";
 
 dotenv.config();
 
@@ -17,6 +21,10 @@ app.use(cors({ origin: process.env.CLIENT_ORIGIN }));
 app.get("/health", (req, res) => {
   res.json({ ok: true, service: "contract-mgmt-api" });
 });
+
+app.use("/api", requireAuth, attachContext);
+app.use("/api/me", meRouter);
+app.use("/api/orgs", orgsRouter);
 
 app.use("/api/contracts", contractsRouter);
 app.use("/api/templates", templatesRouter);

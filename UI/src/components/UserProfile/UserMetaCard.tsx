@@ -1,128 +1,257 @@
+// UI/src/components/UserProfile/UserMetaData.tsx
+import { useEffect, useMemo, useState } from "react";
+import { useAuth0 } from "@auth0/auth0-react";
+
 import { useModal } from "../../hooks/useModal";
 import { Modal } from "../ui/modal";
 import Button from "../ui/button/Button";
-import Input from "../form/input/InputField";
 import Label from "../form/Label";
-import { useAuth0 } from "@auth0/auth0-react";
+import Input from "../form/input/InputField";
+import http from "../../api/http";
 
-export default function UserMetaCard() {
+type OrgSummary = { id: string; name: string; role: string };
+
+type Address = {
+  line1: string;
+  line2: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  country: string;
+};
+
+type MeUser = {
+  id?: string;
+  email: string;
+  fullName: string;
+  phone?: string;
+  bio?: string;
+  locale?: string;
+  address?: Address;
+  activeOrgId?: string;
+};
+
+type MeResponse = {
+  user: MeUser;
+  orgs: OrgSummary[];
+};
+
+const LOCALES = [
+  { label: "English (United States)", value: "en-US" },
+  { label: "English (United Kingdom)", value: "en-GB" },
+  { label: "English (India)", value: "en-IN" },
+  { label: "Hindi (India)", value: "hi-IN" },
+  { label: "Telugu (India)", value: "te-IN" },
+  { label: "Tamil (India)", value: "ta-IN" },
+  { label: "Spanish (United States)", value: "es-US" },
+  { label: "Spanish (Mexico)", value: "es-MX" },
+  { label: "French (France)", value: "fr-FR" },
+  { label: "German (Germany)", value: "de-DE" },
+];
+
+function normalizeLocale(input?: string) {
+  if (!input) return "";
+  const hit = LOCALES.find(
+    (l) => l.value.toLowerCase() === input.toLowerCase()
+  );
+  return hit?.value ?? input;
+}
+
+export default function UserMetaData() {
+  const { user: auth0User, isAuthenticated } = useAuth0();
   const { isOpen, openModal, closeModal } = useModal();
-  const { isAuthenticated, user } = useAuth0();
 
-  const displayName = user?.name || user?.nickname || user?.email || "User";
-  const displayRole = "Account"; // later we’ll map this from Mongo org role
-  const displayLocation = user?.locale || "—";
-  const displayPicture = user?.picture || "/images/user/owner.jpg";
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
-  const handleSave = () => {
-    // Later: save into MongoDB user profile (optional)
-    console.log("Saving changes...");
-    closeModal();
-  };
+  const [me, setMe] = useState<MeUser | null>(null);
+  const [orgs, setOrgs] = useState<OrgSummary[]>([]);
+
+  // Edit form state
+  const [fullName, setFullName] = useState("");
+  const [locale, setLocale] = useState("en-US");
+
+  const activeOrg = useMemo(() => {
+    const activeOrgId = me?.activeOrgId;
+    if (!activeOrgId) return null;
+    return orgs.find((o) => o.id === activeOrgId) ?? null;
+  }, [me?.activeOrgId, orgs]);
+
+  const displayName = useMemo(() => {
+    return (
+      me?.fullName ||
+      (auth0User?.name as string | undefined) ||
+      (auth0User?.nickname as string | undefined) ||
+      me?.email ||
+      "User"
+    );
+  }, [me?.fullName, me?.email, auth0User?.name, auth0User?.nickname]);
+
+  const displayEmail = useMemo(() => {
+    return me?.email || (auth0User?.email as string | undefined) || "";
+  }, [me?.email, auth0User?.email]);
+
+  const displayPicture = useMemo(() => {
+    return (
+      (auth0User?.picture as string | undefined) || "/images/user/owner.jpg"
+    );
+  }, [auth0User?.picture]);
+
+  async function load() {
+    const { data } = await http.get<MeResponse>("/api/me");
+    setMe(data.user);
+    setOrgs(data.orgs || []);
+    setFullName(data.user.fullName || "");
+    setLocale(
+      normalizeLocale(data.user.locale) ||
+        normalizeLocale((auth0User?.locale as string) || "") ||
+        "en-US"
+    );
+  }
+
+  useEffect(() => {
+    (async () => {
+      try {
+        await load();
+      } finally {
+        setLoading(false);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function openEdit() {
+    if (!me) return;
+    setFullName(me.fullName || "");
+    setLocale(
+      normalizeLocale(me.locale) ||
+        normalizeLocale((auth0User?.locale as string) || "") ||
+        "en-US"
+    );
+    openModal();
+  }
+
+  async function save() {
+    if (!me) return;
+    setSaving(true);
+    try {
+      const payload = {
+        fullName,
+        locale,
+      };
+
+      const { data } = await http.put<{ ok: boolean; user: MeUser }>(
+        "/api/me/profile",
+        payload
+      );
+      setMe(data.user);
+      closeModal();
+    } finally {
+      setSaving(false);
+    }
+  }
 
   return (
     <>
-      <div className="p-5 border border-gray-200 rounded-2xl dark:border-gray-800 lg:p-6">
-        <div className="flex flex-col gap-5 xl:flex-row xl:items-center xl:justify-between">
-          <div className="flex flex-col items-center w-full gap-6 xl:flex-row">
-            <div className="w-20 h-20 overflow-hidden border border-gray-200 rounded-full dark:border-gray-800">
-              <img src={displayPicture} alt="user" />
-            </div>
-
-            <div className="order-3 xl:order-2">
-              <h4 className="mb-2 text-lg font-semibold text-center text-gray-800 dark:text-white/90 xl:text-left">
+      <div className="rounded-2xl border border-gray-200 p-5 dark:border-gray-800 lg:p-6">
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-4">
+            <img
+              src={displayPicture}
+              alt="avatar"
+              className="h-14 w-14 rounded-full object-cover"
+            />
+            <div>
+              <h4 className="text-base font-semibold text-gray-800 dark:text-white/90">
                 {displayName}
               </h4>
-              <div className="flex flex-col items-center gap-1 text-center xl:flex-row xl:gap-3 xl:text-left">
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {displayRole}
-                </p>
-                <div className="hidden h-3.5 w-px bg-gray-300 dark:bg-gray-700 xl:block"></div>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {displayLocation}
-                </p>
-              </div>
-            </div>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                {displayEmail || "—"}
+              </p>
 
-            {/* Keep your social icons section as-is (static links for template) */}
-            <div className="flex items-center order-2 gap-2 grow xl:order-3 xl:justify-end">
-              {/* unchanged buttons/links here — keep your current content */}
+              {activeOrg ? (
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Active Org:{" "}
+                  <span className="font-medium text-gray-700 dark:text-gray-200">
+                    {activeOrg.name}
+                  </span>
+                  <span className="ml-2 text-xs text-gray-500 dark:text-gray-400">
+                    ({activeOrg.role})
+                  </span>
+                </p>
+              ) : (
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Active Org: —
+                </p>
+              )}
             </div>
           </div>
 
-          <button
-            onClick={openModal}
-            className="flex w-full items-center justify-center gap-2 rounded-full border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 hover:text-gray-800 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-white/[0.03] dark:hover:text-gray-200 lg:inline-flex lg:w-auto"
-            disabled={!isAuthenticated}
-            title={!isAuthenticated ? "Sign in to edit" : "Edit"}
-          >
-            <svg
-              className="fill-current"
-              width="18"
-              height="18"
-              viewBox="0 0 18 18"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
+          <div className="flex items-center gap-2">
+            <button
+              onClick={openEdit}
+              disabled={!isAuthenticated || loading}
+              title={!isAuthenticated ? "Sign in to edit" : "Edit"}
+              className="flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200"
             >
-              <path
-                fillRule="evenodd"
-                clipRule="evenodd"
-                d="M15.0911 2.78206C14.2125 1.90338 12.7878 1.90338 11.9092 2.78206L4.57524 10.116C4.26682 10.4244 4.0547 10.8158 3.96468 11.2426L3.31231 14.3352C3.25997 14.5833 3.33653 14.841 3.51583 15.0203C3.69512 15.1996 3.95286 15.2761 4.20096 15.2238L7.29355 14.5714C7.72031 14.4814 8.11172 14.2693 8.42013 13.9609L15.7541 6.62695C16.6327 5.74827 16.6327 4.32365 15.7541 3.44497L15.0911 2.78206Z"
-                fill=""
-              />
-            </svg>
-            Edit
-          </button>
+              Edit
+            </button>
+          </div>
         </div>
+
+        {loading ? (
+          <div className="mt-4 text-sm text-gray-500 dark:text-gray-400">
+            Loading…
+          </div>
+        ) : null}
       </div>
 
       <Modal isOpen={isOpen} onClose={closeModal} className="max-w-[700px] m-4">
-        <div className="no-scrollbar relative w-full max-w-[700px] overflow-y-auto rounded-3xl bg-white p-4 dark:bg-gray-900 lg:p-11">
-          <div className="px-2 pr-14">
-            <h4 className="mb-2 text-2xl font-semibold text-gray-800 dark:text-white/90">
-              Edit Personal Information
+        <div className="relative w-full p-4 overflow-y-auto bg-white no-scrollbar rounded-3xl dark:bg-gray-900 lg:p-11">
+          <div className="mb-6">
+            <h4 className="text-xl font-semibold text-gray-800 dark:text-white/90">
+              Edit Profile
             </h4>
-            <p className="mb-6 text-sm text-gray-500 dark:text-gray-400 lg:mb-7">
-              (Read-only for now) We’ll enable saving once we store profiles in
-              MongoDB.
-            </p>
           </div>
 
-          <form className="flex flex-col">
-            <div className="custom-scrollbar h-[450px] overflow-y-auto px-2 pb-3">
-              <div className="mt-2">
-                <h5 className="mb-5 text-lg font-medium text-gray-800 dark:text-white/90 lg:mb-6">
-                  Personal Information
-                </h5>
-
-                <div className="grid grid-cols-1 gap-x-6 gap-y-5 lg:grid-cols-2">
-                  <div className="col-span-2 lg:col-span-1">
-                    <Label>Name</Label>
-                    <Input type="text" value={displayName} readOnly />
-                  </div>
-
-                  <div className="col-span-2 lg:col-span-1">
-                    <Label>Email</Label>
-                    <Input type="text" value={user?.email ?? ""} readOnly />
-                  </div>
-
-                  <div className="col-span-2">
-                    <Label>Locale</Label>
-                    <Input type="text" value={user?.locale ?? ""} readOnly />
-                  </div>
-                </div>
-              </div>
+          <div className="space-y-5">
+            <div>
+              <Label>Name</Label>
+              <Input
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+              />
             </div>
 
-            <div className="flex items-center gap-3 px-2 mt-6 lg:justify-end">
-              <Button size="sm" variant="outline" onClick={closeModal}>
-                Close
-              </Button>
-              <Button size="sm" onClick={handleSave} disabled>
-                Save Changes
-              </Button>
+            <div>
+              <Label>Email</Label>
+              <Input value={displayEmail} disabled />
             </div>
-          </form>
+
+            <div>
+              <Label>Language & Region (Locale)</Label>
+              <select
+                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm text-gray-800 dark:border-gray-700 dark:bg-gray-900 dark:text-white"
+                value={locale}
+                onChange={(e) => setLocale(e.target.value)}
+              >
+                {LOCALES.map((x) => (
+                  <option key={x.value} value={x.value}>
+                    {x.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="mt-8 flex items-center justify-end gap-3">
+            <Button variant="outline" onClick={closeModal} disabled={saving}>
+              Cancel
+            </Button>
+            <Button onClick={save} disabled={saving}>
+              {saving ? "Saving…" : "Save"}
+            </Button>
+          </div>
         </div>
       </Modal>
     </>

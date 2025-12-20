@@ -9,7 +9,9 @@ export default function RequireAuth() {
     if (!isLoading && !isAuthenticated) {
       loginWithRedirect({
         authorizationParams: {
-          redirect_uri: `${window.location.origin}`,
+          redirect_uri: window.location.origin,
+          audience: import.meta.env.VITE_AUTH0_AUDIENCE,
+          scope: "openid profile email",
         },
       });
     }
