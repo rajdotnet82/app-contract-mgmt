@@ -40,8 +40,8 @@ export async function getInvoice(id: string) {
   return data;
 }
 
-export async function createInvoice(payload: Partial<Invoice>) {
-  const { data } = await http.post<Invoice>("/api/invoices", payload);
+export async function createInvoice(payload?: Partial<Invoice>) {
+  const { data } = await http.post<Invoice>("/api/invoices", payload ?? {});
   return data;
 }
 

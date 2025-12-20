@@ -16,7 +16,11 @@ declare global {
 export async function attachContext(req: Request, res: Response, next: NextFunction) {
   try {
     const sub = req.auth?.payload?.sub;
-    const email = req.auth?.payload?.["https://app-contract-mgmt/email"]; 
+
+    // Prefer your custom claim, but allow standard `email` as a fallback.
+    const email =
+      req.auth?.payload?.["https://app-contract-mgmt/email"] ??
+      req.auth?.payload?.email;
 
     if (!sub) return res.status(401).json({ error: "Missing auth subject" });
     if (!email) return res.status(401).json({ error: "Missing email in token (add scope/profile)" });

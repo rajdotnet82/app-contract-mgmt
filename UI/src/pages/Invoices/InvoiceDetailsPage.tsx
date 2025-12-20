@@ -84,13 +84,16 @@ export default function InvoiceDetailsPage() {
             Edit
           </button>
 
-          <button
-            className="rounded-lg border border-gray-200 dark:border-gray-800 px-3 py-2 text-sm"
-            onClick={() => window.print()}
-            title="Print/PDF (basic)"
-          >
-            PDF
-          </button>
+          {/* ✅ PDF only in Preview mode */}
+          {tab === "Preview" && (
+            <button
+              className="rounded-lg border border-gray-200 dark:border-gray-800 px-3 py-2 text-sm"
+              onClick={() => window.print()}
+              title="Print/PDF (basic)"
+            >
+              PDF
+            </button>
+          )}
         </div>
       </div>
 

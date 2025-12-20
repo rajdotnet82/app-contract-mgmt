@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import InvoiceModel, { InvoiceStatus, InvoiceLineItem } from "../models/Invoice";
+import Organization from "../models/Organization";
 
 const ALLOWED_SORT = new Set(["createdAt", "invoiceDate", "dueDate", "number", "balanceDue"]);
 
@@ -9,18 +10,35 @@ function toNumber(value: any, fallback = 0): number {
 }
 
 function computeLineItems(items: any[]): InvoiceLineItem[] {
-  return (items ?? []).map((li) => {
-    const rate = toNumber(li.rate, 0);
-    const qty = toNumber(li.qty, 0);
-    const amount = Number.isFinite(Number(li.amount)) ? toNumber(li.amount, rate * qty) : rate * qty;
+  const safeItems = (items ?? []).map((li) => {
+    const rawDesc = String(li?.description ?? "");
+    const desc = rawDesc.trim();
+
+    const rate = toNumber(li?.rate, 0);
+    const qty = toNumber(li?.qty, 1); // default qty to 1 if missing
+
+    // ✅ Mongoose requires description, so never allow empty
+    const safeDescription = desc.length > 0 ? desc : "Item";
+
+    const amount =
+      Number.isFinite(Number(li?.amount))
+        ? toNumber(li.amount, rate * qty)
+        : rate * qty;
+
     return {
-      description: String(li.description ?? "").trim(),
+      description: safeDescription,
       rate,
       qty,
       amount,
     };
   });
+
+  // Optional: if nothing provided, still create one default line
+  return safeItems.length > 0
+    ? safeItems
+    : [{ description: "Item", rate: 0, qty: 1, amount: 0 }];
 }
+
 
 function computeTotals(params: {
   lineItems: InvoiceLineItem[];
@@ -65,7 +83,10 @@ export async function listInvoices(req: Request, res: Response) {
     sortDir?: string;
   };
 
-  const filter: any = {};
+  const orgId = req.activeOrgId;
+  const filter: any = orgId
+    ? { $or: [{ orgId }, { orgId: { $exists: false } }] }
+    : {};
 
   const s = String(q || "").trim();
   if (s) {
@@ -90,7 +111,10 @@ export async function listInvoices(req: Request, res: Response) {
 
 export async function getInvoice(req: Request, res: Response) {
   const { id } = req.params;
-  const item = await InvoiceModel.findById(id);
+  const orgId = req.activeOrgId;
+  const item = orgId
+    ? await InvoiceModel.findOne({ _id: id, $or: [{ orgId }, { orgId: { $exists: false } }] })
+    : await InvoiceModel.findById(id);
 
   if (!item) return res.status(404).json({ message: "Invoice not found" });
 
@@ -99,6 +123,27 @@ export async function getInvoice(req: Request, res: Response) {
 
 export async function createInvoice(req: Request, res: Response) {
   const body = req.body ?? {};
+  const orgId = req.activeOrgId;
+  const fromUserId = req.userId;
+
+  // Defaults that make "New invoice" work even if UI sends minimal payload.
+  const now = new Date();
+  const generatedNumber =
+    body.number ??
+    `INV-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(
+      now.getDate()
+    ).padStart(2, "0")}-${String(Math.floor(Math.random() * 10000)).padStart(4, "0")}`;
+
+  // Use org name as a sensible default for the "from" party.
+  let orgName: string | undefined;
+  if (orgId) {
+    const org = await Organization.findById(orgId).select("name");
+    orgName = org?.name;
+  }
+
+  const fromParty = body.from ?? { name: orgName ?? "My Organization" };
+  // billTo.name is required; use a placeholder so the document is valid.
+  const billToParty = body.billTo ?? { name: "Client" };
 
   const lineItems = computeLineItems(body.lineItems ?? []);
 
@@ -109,16 +154,19 @@ export async function createInvoice(req: Request, res: Response) {
   });
 
   const doc = await InvoiceModel.create({
-    number: body.number,
+    orgId: orgId ?? undefined,
+    fromUserId: fromUserId ?? undefined,
+
+    number: generatedNumber,
     status: normalizeStatus(body.status) ?? "Draft",
     currency: body.currency ?? "USD",
 
-    invoiceDate: body.invoiceDate ? new Date(body.invoiceDate) : new Date(),
+    invoiceDate: body.invoiceDate ? new Date(body.invoiceDate) : now,
     dueDate: body.dueDate ? new Date(body.dueDate) : undefined,
     terms: body.terms,
 
-    from: body.from,
-    billTo: body.billTo,
+    from: fromParty,
+    billTo: billToParty,
 
     lineItems,
 
@@ -148,7 +196,10 @@ export async function updateInvoice(req: Request, res: Response) {
   const { id } = req.params;
   const body = req.body ?? {};
 
-  const existing = await InvoiceModel.findById(id);
+  const orgId = req.activeOrgId;
+  const existing = orgId
+    ? await InvoiceModel.findOne({ _id: id, $or: [{ orgId }, { orgId: { $exists: false } }] })
+    : await InvoiceModel.findById(id);
   if (!existing) return res.status(404).json({ message: "Invoice not found" });
 
   const lineItems = computeLineItems(body.lineItems ?? existing.lineItems);
@@ -205,14 +256,19 @@ export async function updateInvoice(req: Request, res: Response) {
 
   await existing.save();
 
-  const updated = await InvoiceModel.findById(existing._id);
+  const updated = orgId
+    ? await InvoiceModel.findOne({ _id: existing._id, $or: [{ orgId }, { orgId: { $exists: false } }] })
+    : await InvoiceModel.findById(existing._id);
   res.json(updated ?? existing);
 }
 
 export async function deleteInvoice(req: Request, res: Response) {
   const { id } = req.params;
 
-  const deleted = await InvoiceModel.findByIdAndDelete(id);
+  const orgId = req.activeOrgId;
+  const deleted = orgId
+    ? await InvoiceModel.findOneAndDelete({ _id: id, $or: [{ orgId }, { orgId: { $exists: false } }] })
+    : await InvoiceModel.findByIdAndDelete(id);
   if (!deleted) return res.status(404).json({ message: "Invoice not found" });
 
   res.json({ ok: true });
