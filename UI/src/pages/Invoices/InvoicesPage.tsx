@@ -1,54 +1,146 @@
-import { useCallback, useEffect, useState } from "react";
-import InvoicesSearch from "./InvoicesSearch";
-import InvoicesResults from "./InvoicesResults";
-import type { Invoice, InvoiceSearchCriteria } from "./types";
-import { fetchInvoices, deleteInvoice } from "./api";
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { listInvoices, type Invoice } from "./api";
+import { isOrgRequiredError } from "../../api/errors";
 
 export default function InvoicesPage() {
-  const [criteria, setCriteria] = useState<InvoiceSearchCriteria>({
-    q: "",
-    tab: "All",
-  });
-  const [items, setItems] = useState<Invoice[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const navigate = useNavigate();
 
-  const load = useCallback(async (c: InvoiceSearchCriteria) => {
-    setLoading(true);
-    setError("");
-    try {
-      const data = await fetchInvoices(c);
-      setItems(data);
-    } catch (e: any) {
-      setError(e?.message ?? "Failed to load invoices");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const [loading, setLoading] = useState(true);
+  const [items, setItems] = useState<Invoice[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [orgRequired, setOrgRequired] = useState(false);
 
   useEffect(() => {
-    load(criteria);
-  }, [criteria, load]);
+    let cancelled = false;
 
-  const handleDelete = async (id: string) => {
-    if (!confirm("Delete this invoice?")) return;
-    try {
-      await deleteInvoice(id);
-      await load(criteria);
-    } catch (e: any) {
-      alert(e?.message ?? "Delete failed");
+    async function load() {
+      try {
+        setLoading(true);
+        setError(null);
+        setOrgRequired(false);
+
+        const data = await listInvoices({
+          sortBy: "invoiceDate",
+          sortDir: "desc",
+        });
+        if (cancelled) return;
+
+        setItems(data);
+      } catch (e: any) {
+        if (cancelled) return;
+
+        if (isOrgRequiredError(e)) {
+          setOrgRequired(true);
+          setItems([]);
+          return;
+        }
+
+        setError(
+          e?.response?.data?.message || e?.message || "Failed to load invoices"
+        );
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     }
-  };
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (loading) {
+    return (
+      <div style={{ padding: 24 }}>
+        <h2>Invoices</h2>
+        <div>Loading…</div>
+      </div>
+    );
+  }
+
+  if (orgRequired) {
+    return (
+      <div style={{ padding: 24, maxWidth: 720 }}>
+        <h2 style={{ marginBottom: 8 }}>Organization Required</h2>
+        <p style={{ marginBottom: 16 }}>
+          You must create or join an organization before viewing invoices.
+        </p>
+
+        <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+          <button onClick={() => navigate("/profile")}>Go to Profile</button>
+          <button onClick={() => navigate("/invites")}>Accept Invite</button>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div style={{ padding: 24 }}>
+        <h2>Invoices</h2>
+        <div style={{ marginTop: 12, marginBottom: 12 }}>{error}</div>
+        <button onClick={() => window.location.reload()}>Retry</button>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-4">
-      <InvoicesSearch criteria={criteria} onChange={setCriteria} />
-      <InvoicesResults
-        items={items}
-        loading={loading}
-        error={error}
-        onDelete={handleDelete}
-      />
+    <div style={{ padding: 24 }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
+        <h2 style={{ margin: 0 }}>Invoices</h2>
+        <button onClick={() => navigate("/invoices/new")}>New Invoice</button>
+      </div>
+
+      <div style={{ marginTop: 16 }}>
+        {items.length === 0 ? (
+          <div>No invoices yet.</div>
+        ) : (
+          <div style={{ display: "grid", gap: 10 }}>
+            {items.map((inv) => (
+              <div
+                key={inv._id}
+                style={{
+                  border: "1px solid #ddd",
+                  borderRadius: 10,
+                  padding: 12,
+                  cursor: "pointer",
+                }}
+                onClick={() => navigate(`/invoices/${inv._id}`)}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    gap: 12,
+                  }}
+                >
+                  <div style={{ fontWeight: 700 }}>{inv.number}</div>
+                  <div>{inv.status}</div>
+                </div>
+
+                <div style={{ marginTop: 6, fontSize: 13, opacity: 0.85 }}>
+                  Date: {new Date(inv.invoiceDate).toLocaleDateString()}
+                  {inv.dueDate
+                    ? ` • Due: ${new Date(inv.dueDate).toLocaleDateString()}`
+                    : ""}
+                </div>
+
+                <div style={{ marginTop: 6 }}>
+                  Total: {inv.currency} {inv.total.toFixed(2)} • Balance:{" "}
+                  {inv.currency} {inv.balanceDue.toFixed(2)}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

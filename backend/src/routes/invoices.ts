@@ -5,11 +5,16 @@ import {
   createInvoice,
   updateInvoice,
   deleteInvoice,
+  purgeInvoices,
 } from "../controllers/invoicesController";
 
 const router = express.Router();
 
 router.get("/", listInvoices);
+
+// Must be defined before "/:id"
+router.delete("/purge", purgeInvoices);
+
 router.get("/:id", getInvoice);
 router.post("/", createInvoice);
 router.put("/:id", updateInvoice);
