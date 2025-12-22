@@ -1,19 +1,23 @@
-import React from "react";
-import { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import http from "../api/http";
 
 type ActiveOrg = {
-  _id: string;
+  id?: string; // backend returns id
+  _id?: string; // allow _id too, just in case
   name: string;
   logoUrl?: string;
 };
 
 type OrgGateProps = {
   children: React.ReactNode;
-  /** Where to send user to create/select org */
   fallbackTo?: string;
 };
+
+function getOrgId(org: ActiveOrg | null | undefined): string | undefined {
+  if (!org) return undefined;
+  return (org as any).id || (org as any)._id;
+}
 
 export default function OrgGate({
   children,
@@ -38,12 +42,12 @@ export default function OrgGate({
         setLoading(true);
         setError(null);
 
-        // Backend should return active org or 404/empty if none.
         const { data } = await http.get<ActiveOrg | null>("/api/orgs/active");
-
         if (cancelled) return;
 
-        if (!data || !(data as any)._id) {
+        const orgId = getOrgId(data ?? null);
+
+        if (!data || !orgId) {
           setOrg(null);
         } else {
           setOrg(data);
@@ -51,12 +55,9 @@ export default function OrgGate({
       } catch (e: any) {
         if (cancelled) return;
 
-        // Handle ORG_REQUIRED style errors or generic ones
         const status = e?.response?.status;
         const code = e?.response?.data?.code;
 
-        // If backend enforces ORG_REQUIRED for active-org endpoint (some do),
-        // treat it as "no org selected/available" in UI.
         if (status === 403 && code === "ORG_REQUIRED") {
           setOrg(null);
         } else {

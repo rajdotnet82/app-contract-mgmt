@@ -86,7 +86,7 @@ export default function InvoicesPage() {
   }
 
   return (
-    <div style={{ padding: 24 }}>
+    <div className="space-y-4">
       <div
         style={{
           display: "flex",
@@ -94,8 +94,13 @@ export default function InvoicesPage() {
           justifyContent: "space-between",
         }}
       >
-        <h2 style={{ margin: 0 }}>Invoices</h2>
-        <button onClick={() => navigate("/invoices/new")}>New Invoice</button>
+        <h1 className="text-lg font-semibold">Invoices</h1>
+        <button
+          className="mt-3 rounded-lg bg-blue-600 px-3 py-2 text-sm text-white disabled:opacity-60"
+          onClick={() => navigate("/invoices/new")}
+        >
+          New Invoice
+        </button>
       </div>
 
       <div style={{ marginTop: 16 }}>
