@@ -6,11 +6,13 @@ const http = axios.create({
 });
 
 http.interceptors.request.use(async (config) => {
-  // attach token only for your backend APIs
   if (config.url?.startsWith("/api")) {
     const token = await getToken();
-    config.headers = config.headers ?? {};
-    config.headers.Authorization = `Bearer ${token}`;
+    // If we're redirecting or token is missing, don't attach Authorization
+    if (token) {
+      config.headers = config.headers ?? {};
+      config.headers.Authorization = `Bearer ${token}`;
+    }
   }
   return config;
 });
