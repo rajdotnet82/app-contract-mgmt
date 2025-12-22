@@ -9,8 +9,12 @@ http.interceptors.request.use(async (config) => {
   // attach token only for your backend APIs
   if (config.url?.startsWith("/api")) {
     const token = await getToken();
-    config.headers = config.headers ?? {};
-    config.headers.Authorization = `Bearer ${token}`;
+
+    // If token is empty (ex: redirect in progress), don't attach Authorization
+    if (token) {
+      config.headers = config.headers ?? {};
+      config.headers.Authorization = `Bearer ${token}`;
+    }
   }
   return config;
 });
