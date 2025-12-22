@@ -1,98 +1,54 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router";
+import { useEffect } from "react";
+import { useAuth0 } from "@auth0/auth0-react";
+
 import NotFound from "./pages/OtherPage/NotFound";
-import UserProfiles from "./pages/UserProfiles";
-import Videos from "./pages/UiElements/Videos";
-import Images from "./pages/UiElements/Images";
-import Alerts from "./pages/UiElements/Alerts";
-import Badges from "./pages/UiElements/Badges";
-import Avatars from "./pages/UiElements/Avatars";
-import Buttons from "./pages/UiElements/Buttons";
-import LineChart from "./pages/Charts/LineChart";
-import BarChart from "./pages/Charts/BarChart";
-import Calendar from "./pages/Calendar";
-import BasicTables from "./pages/Tables/BasicTables";
-import FormElements from "./pages/Forms/FormElements";
-import Blank from "./pages/Blank";
 import AppLayout from "./layout/AppLayout";
 import { ScrollToTop } from "./components/common/ScrollToTop";
+
+import RequireAuth from "./components/auth/RequireAuth";
+import RequireOrg from "./components/auth/RequireOrg";
+import { setTokenGetter } from "./components/auth/token";
+
 import Home from "./pages/Dashboard/Home";
+import UserProfiles from "./pages/UserProfiles";
+
 import ContractsPage from "./pages/Contracts/ContractsPage";
 import ContractCreatePage from "./pages/Contracts/ContractCreatePage";
 import ContractEditPage from "./pages/Contracts/ContractEditPage";
 import ContractDetailsPage from "./pages/Contracts/ContractDetailsPage";
+
 import TemplatesPage from "./pages/Templates/TemplatesPage";
 import TemplateCreatePage from "./pages/Templates/TemplateCreatePage";
 import TemplateEditPage from "./pages/Templates/TemplateEditPage";
+
 import ClientsPage from "./pages/Clients/ClientsPage";
 import ClientCreatePage from "./pages/Clients/ClientCreatePage";
 import ClientEditPage from "./pages/Clients/ClientEditPage";
 import ClientDetailsPage from "./pages/Clients/ClientDetailsPage";
+
 import InvoicesPage from "./pages/Invoices/InvoicesPage";
 import InvoiceCreatePage from "./pages/Invoices/InvoiceCreatePage";
-import RequireAuth from "./components/auth/RequireAuth";
-import { setTokenGetter } from "./components/auth/token";
-import { useEffect } from "react";
-import { useAuth0 } from "@auth0/auth0-react";
 import InvoiceDetailsPage from "./pages/Invoices/InvoiceDetailsPage";
 
-export function TokenBootstrap() {
-  const { isAuthenticated, getAccessTokenSilently, loginWithRedirect } =
-    useAuth0();
+import Calendar from "./pages/Calendar";
+import Blank from "./pages/Blank";
+import FormElements from "./pages/Forms/FormElements";
+import BasicTables from "./pages/Tables/BasicTables";
 
-  useEffect(() => {
-    if (!isAuthenticated) return;
+import Alerts from "./pages/UiElements/Alerts";
+import Avatars from "./pages/UiElements/Avatars";
+import Badges from "./pages/UiElements/Badges";
+import Buttons from "./pages/UiElements/Buttons";
+import Images from "./pages/UiElements/Images";
+import Videos from "./pages/UiElements/Videos";
 
-    let inFlight: Promise<string> | null = null;
+import LineChart from "./pages/Charts/LineChart";
+import BarChart from "./pages/Charts/BarChart";
 
-    setTokenGetter(async () => {
-      // prevent 5 components from triggering 5 token calls at once
-      if (inFlight) return inFlight;
-
-      inFlight = (async () => {
-        try {
-          const token = await getAccessTokenSilently({
-            authorizationParams: {
-              audience: import.meta.env.VITE_AUTH0_AUDIENCE,
-              scope: "openid profile email",
-            },
-          });
-          return token;
-        } catch (e: any) {
-          const code = e?.error ?? e?.code;
-
-          // These mean "silent auth can't continue; user must interact"
-          if (
-            code === "consent_required" ||
-            code === "login_required" ||
-            code === "interaction_required"
-          ) {
-            await loginWithRedirect({
-              authorizationParams: {
-                redirect_uri: window.location.origin,
-                audience: import.meta.env.VITE_AUTH0_AUDIENCE,
-                scope: "openid profile email",
-              },
-              appState: {
-                returnTo: window.location.pathname + window.location.search,
-              },
-            });
-
-            // loginWithRedirect navigates away; return empty just to satisfy TS
-            return "";
-          }
-
-          throw e;
-        } finally {
-          inFlight = null;
-        }
-      })();
-
-      return inFlight;
-    });
-  }, [isAuthenticated, getAccessTokenSilently, loginWithRedirect]);
-
-  return null;
-}
+import OrgSetupPage from "./pages/Onboarding/OrgSetupPage";
+import InviteAcceptPage from "./pages/Invites/InviteAcceptPage";
+import { TokenBootstrap } from "./components/auth/TokenBootstrap";
 
 export default function App() {
   return (
@@ -101,59 +57,63 @@ export default function App() {
       <Router>
         <ScrollToTop />
         <Routes>
+          {/* Must be authenticated for everything (your backend requires JWT for /api) */}
           <Route element={<RequireAuth />}>
-            <Route element={<AppLayout />}>
-              <Route index path="/" element={<Home />} />
+            {/* These routes must work without org */}
+            <Route path="/onboarding/org" element={<OrgSetupPage />} />
+            <Route path="/invite/:token" element={<InviteAcceptPage />} />
 
-              <Route path="/contracts" element={<ContractsPage />} />
-              <Route path="/contracts/new" element={<ContractCreatePage />} />
-              <Route
-                path="/contracts/:id/edit"
-                element={<ContractEditPage />}
-              />
-              <Route path="/contracts/:id" element={<ContractDetailsPage />} />
-              <Route path="/templates" element={<TemplatesPage />} />
-              <Route path="/templates/new" element={<TemplateCreatePage />} />
-              <Route
-                path="/templates/:id/edit"
-                element={<TemplateEditPage />}
-              />
-              <Route path="/clients" element={<ClientsPage />} />
-              <Route path="/clients/new" element={<ClientCreatePage />} />
-              <Route path="/clients/:id" element={<ClientDetailsPage />} />
-              <Route path="/clients/:id/edit" element={<ClientEditPage />} />
+            {/* Everything else requires org */}
+            <Route element={<RequireOrg />}>
+              <Route element={<AppLayout />}>
+                <Route index path="/" element={<Home />} />
 
-              <Route path="/invoices" element={<InvoicesPage />} />
-              <Route path="/invoices/new" element={<InvoiceCreatePage />} />
-              <Route path="/invoices/:id" element={<InvoiceDetailsPage />} />
+                <Route path="/contracts" element={<ContractsPage />} />
+                <Route path="/contracts/new" element={<ContractCreatePage />} />
+                <Route
+                  path="/contracts/:id/edit"
+                  element={<ContractEditPage />}
+                />
+                <Route
+                  path="/contracts/:id"
+                  element={<ContractDetailsPage />}
+                />
 
-              {/* Others Page */}
-              <Route path="/profile" element={<UserProfiles />} />
-              <Route path="/calendar" element={<Calendar />} />
-              <Route path="/blank" element={<Blank />} />
+                <Route path="/templates" element={<TemplatesPage />} />
+                <Route path="/templates/new" element={<TemplateCreatePage />} />
+                <Route
+                  path="/templates/:id/edit"
+                  element={<TemplateEditPage />}
+                />
 
-              {/* Forms */}
-              <Route path="/form-elements" element={<FormElements />} />
+                <Route path="/clients" element={<ClientsPage />} />
+                <Route path="/clients/new" element={<ClientCreatePage />} />
+                <Route path="/clients/:id" element={<ClientDetailsPage />} />
+                <Route path="/clients/:id/edit" element={<ClientEditPage />} />
 
-              {/* Tables */}
-              <Route path="/basic-tables" element={<BasicTables />} />
+                <Route path="/invoices" element={<InvoicesPage />} />
+                <Route path="/invoices/new" element={<InvoiceCreatePage />} />
+                <Route path="/invoices/:id" element={<InvoiceDetailsPage />} />
 
-              {/* Ui Elements */}
-              <Route path="/alerts" element={<Alerts />} />
-              <Route path="/avatars" element={<Avatars />} />
-              <Route path="/badge" element={<Badges />} />
-              <Route path="/buttons" element={<Buttons />} />
-              <Route path="/images" element={<Images />} />
-              <Route path="/videos" element={<Videos />} />
-
-              {/* Charts */}
-              <Route path="/line-chart" element={<LineChart />} />
-              <Route path="/bar-chart" element={<BarChart />} />
+                {/* Others */}
+                <Route path="/profile" element={<UserProfiles />} />
+                <Route path="/calendar" element={<Calendar />} />
+                <Route path="/blank" element={<Blank />} />
+                <Route path="/form-elements" element={<FormElements />} />
+                <Route path="/basic-tables" element={<BasicTables />} />
+                <Route path="/alerts" element={<Alerts />} />
+                <Route path="/avatars" element={<Avatars />} />
+                <Route path="/badge" element={<Badges />} />
+                <Route path="/buttons" element={<Buttons />} />
+                <Route path="/images" element={<Images />} />
+                <Route path="/videos" element={<Videos />} />
+                <Route path="/line-chart" element={<LineChart />} />
+                <Route path="/bar-chart" element={<BarChart />} />
+              </Route>
             </Route>
           </Route>
-          {/* Dashboard Layout */}
 
-          {/* Fallback Route */}
+          {/* Fallback */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Router>

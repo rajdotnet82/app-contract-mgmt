@@ -1,6 +1,5 @@
 import type { Request, Response, NextFunction } from "express";
 import User from "../models/User";
-import Organization from "../models/Organization";
 import UserOrganization from "../models/UserOrganization";
 
 declare global {
@@ -17,7 +16,7 @@ export async function attachContext(req: Request, res: Response, next: NextFunct
   try {
     const sub = req.auth?.payload?.sub;
 
-    // Prefer your custom claim, but allow standard `email` as a fallback.
+    // Prefer your custom claim, but allow standard email as fallback
     const email =
       req.auth?.payload?.["https://app-contract-mgmt/email"] ??
       req.auth?.payload?.email;
@@ -25,33 +24,34 @@ export async function attachContext(req: Request, res: Response, next: NextFunct
     if (!sub) return res.status(401).json({ error: "Missing auth subject" });
     if (!email) return res.status(401).json({ error: "Missing email in token (add scope/profile)" });
 
-    // 1) ensure user exists
+    // 1) Ensure user exists
     let user = await User.findOne({ auth0Sub: sub });
-    if (!user) user = await User.create({ auth0Sub: sub, email });
-
-    // 2) memberships
-    let memberships = await UserOrganization.find({ userId: user._id });
-
-    // 3) if none -> create default org + link user as Owner + set active
-    if (memberships.length === 0) {
-      const org = await Organization.create({
-        name: "My Organization",
-        createdByUserId: user._id,
+    if (!user) {
+      user = await User.create({
+        auth0Sub: sub,
+        email: String(email).toLowerCase(),
       });
-
-      await UserOrganization.create({ userId: user._id, orgId: org._id, role: "Owner" });
-
-      user.activeOrgId = org._id;
+    } else if (user.email !== String(email).toLowerCase()) {
+      // keep email updated if Auth0 changes it
+      user.email = String(email).toLowerCase();
       await user.save();
+    }
 
+    // 2) Load memberships
+    const memberships = await UserOrganization.find({ userId: user._id }).lean();
+
+    // ✅ IMPORTANT CHANGE:
+    // If user has NO orgs, we do NOT auto-create one.
+    // We still set req.userId so onboarding/invite endpoints can work.
+    if (memberships.length === 0) {
       req.userId = String(user._id);
-      req.activeOrgId = String(org._id);
+      req.activeOrgId = undefined;
       return next();
     }
 
-    // 4) active org must be valid
+    // 3) Ensure activeOrgId is valid
     const active = user.activeOrgId ? String(user.activeOrgId) : null;
-    const isValid = active ? memberships.some(m => String(m.orgId) === active) : false;
+    const isValid = active ? memberships.some((m: any) => String(m.orgId) === active) : false;
 
     if (!isValid) {
       user.activeOrgId = memberships[0].orgId;
@@ -59,9 +59,10 @@ export async function attachContext(req: Request, res: Response, next: NextFunct
     }
 
     req.userId = String(user._id);
-    req.activeOrgId = String(user.activeOrgId);
-    next();
+    req.activeOrgId = user.activeOrgId ? String(user.activeOrgId) : undefined;
+
+    return next();
   } catch (e: any) {
-    res.status(500).json({ error: "Failed to attach context", detail: e?.message });
+    return res.status(500).json({ error: "Failed to attach context", detail: e?.message });
   }
 }
