@@ -60,3 +60,5 @@ backend/dist/
 # =========================
 data/
 steps.txt
+
+backend/uploads/
