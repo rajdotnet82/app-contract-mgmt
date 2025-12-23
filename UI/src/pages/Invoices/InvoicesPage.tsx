@@ -10,6 +10,7 @@ export default function InvoicesPage() {
   const [items, setItems] = useState<Invoice[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [orgRequired, setOrgRequired] = useState(false);
+  const [statusFilter, setStatusFilter] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -85,6 +86,13 @@ export default function InvoicesPage() {
     );
   }
 
+  const statusOptions = Array.from(
+    new Set(items.map((inv) => inv.status).filter(Boolean))
+  ).sort();
+  const visibleItems = statusFilter
+    ? items.filter((inv) => (inv.status || "") === statusFilter)
+    : items;
+
   return (
     <div className="space-y-4">
       <div
@@ -103,12 +111,39 @@ export default function InvoicesPage() {
         </button>
       </div>
 
+      <div style={{ display: "flex", justifyContent: "space-between" }}>
+        <select
+          value={statusFilter}
+          onChange={(event) => setStatusFilter(event.target.value)}
+          aria-label="Filter by status"
+          style={{
+            width: "100%",
+            maxWidth: 320,
+            padding: "8px 10px",
+            borderRadius: 8,
+            border: "1px solid #ddd",
+            background: "#fff",
+          }}
+        >
+          <option value="">All statuses</option>
+          {statusOptions.map((status) => (
+            <option key={status} value={status}>
+              {status}
+            </option>
+          ))}
+        </select>
+      </div>
+
       <div style={{ marginTop: 16 }}>
-        {items.length === 0 ? (
-          <div>No invoices yet.</div>
+        {visibleItems.length === 0 ? (
+          <div>
+            {items.length === 0
+              ? "No invoices yet."
+              : "No invoices match that status."}
+          </div>
         ) : (
           <div style={{ display: "grid", gap: 10 }}>
-            {items.map((inv) => (
+            {visibleItems.map((inv) => (
               <div
                 key={inv._id}
                 style={{

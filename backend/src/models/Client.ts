@@ -1,73 +1,56 @@
-import mongoose, { Schema, InferSchemaType } from "mongoose";
+import mongoose, { Schema, Document, Types } from "mongoose";
 
-const SecondaryContactSchema = new Schema(
+export interface Client extends Document {
+  orgId: Types.ObjectId; // 🔒 required tenant boundary
+
+  fullName: string;
+  firstName?: string;
+  lastName?: string;
+
+  email?: string;
+  phone?: string;
+
+  addressLine1?: string;
+  addressLine2?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
+  country?: string;
+
+  notes?: string;
+
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+const ClientSchema = new Schema<Client>(
   {
-    name: { type: String, trim: true },
-    role: { type: String, trim: true }, // Bride, Groom, Parent, Planner, etc.
-    email: { type: String, trim: true },
+    orgId: { type: Schema.Types.ObjectId, ref: "Organization", required: true, index: true },
+
+    fullName: { type: String, required: true, trim: true },
+
+    firstName: { type: String, trim: true },
+    lastName: { type: String, trim: true },
+
+    email: { type: String, trim: true, lowercase: true },
     phone: { type: String, trim: true },
-  },
-  { _id: false }
-);
 
-const AddressSchema = new Schema(
-  {
-    line1: { type: String, trim: true },
-    line2: { type: String, trim: true },
+    addressLine1: { type: String, trim: true },
+    addressLine2: { type: String, trim: true },
     city: { type: String, trim: true },
     state: { type: String, trim: true },
     postalCode: { type: String, trim: true },
     country: { type: String, trim: true },
-  },
-  { _id: false }
-);
 
-const ClientSchema = new Schema(
-  {
-    // Core identity
-    clientType: {
-      type: String,
-      enum: ["individual", "couple", "business"],
-      default: "individual",
-    },
-    // How you see them in UI: "Priya & Arjun", "Google – Events Team"
-    displayName: { type: String, required: true, trim: true },
-
-    primaryContactName: { type: String, required: true, trim: true },
-    primaryEmail: { type: String, required: true, trim: true },
-    primaryPhone: { type: String, trim: true },
-
-    // Optional extra fields
-    partnerName: { type: String, trim: true }, // for couples
-    companyName: { type: String, trim: true }, // for business clients
-
-    // Billing & address
-    billingName: { type: String, trim: true },
-    billingEmail: { type: String, trim: true },
-    billingPhone: { type: String, trim: true },
-    address: { type: AddressSchema },
-
-    // Additional contacts (parents, planners, siblings, etc.)
-    secondaryContacts: { type: [SecondaryContactSchema], default: [] },
-
-    // Photography / event profile
-    category: { type: String, trim: true }, // Wedding, Family, Corporate...
-    referralSource: { type: String, trim: true }, // Google, Instagram, Bark...
-    communicationPreference: { type: String, trim: true }, // WhatsApp, Text, Email
-    instagramHandle: { type: String, trim: true },
-    preferredLanguage: { type: String, trim: true },
-
-    // CRM-style fields
-    status: {
-      type: String,
-      enum: ["Lead", "Active", "Past", "VIP", "Cold"],
-      default: "Lead",
-    },
-    tags: { type: [String], default: [] },
-    notes: { type: String, trim: true },
+    notes: { type: String },
   },
   { timestamps: true }
 );
 
-export type Client = InferSchemaType<typeof ClientSchema>;
-export default mongoose.model("Client", ClientSchema);
+// Helpful indexes for org-scoped search/listing
+ClientSchema.index({ orgId: 1, createdAt: -1 });
+ClientSchema.index({ orgId: 1, fullName: 1 });
+// If you want “unique email per org”, uncomment:
+// ClientSchema.index({ orgId: 1, email: 1 }, { unique: true, sparse: true });
+
+export default mongoose.model<Client>("Client", ClientSchema);
