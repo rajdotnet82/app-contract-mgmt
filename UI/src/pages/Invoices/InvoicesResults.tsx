@@ -1,4 +1,5 @@
-import { Link } from "react-router";
+// UI/src/pages/Invoices/InvoicesResults.tsx
+import { Link } from "react-router-dom";
 import type { Invoice } from "./types";
 
 function fmtMoney(n: number, currency = "USD") {
@@ -28,15 +29,11 @@ export default function InvoicesResults({
   error: string;
   onDelete: (id: string) => void;
 }) {
-  if (loading) {
+  if (loading)
     return (
       <div className="text-sm text-gray-600 dark:text-gray-300">Loading…</div>
     );
-  }
-
-  if (error) {
-    return <div className="text-sm text-red-600">{error}</div>;
-  }
+  if (error) return <div className="text-sm text-red-600">{error}</div>;
 
   const sorted = [...items].sort(
     (a, b) =>
@@ -99,15 +96,13 @@ export default function InvoicesResults({
                         {fmtMoney(inv.balanceDue ?? 0, inv.currency)}
                       </div>
 
-                      <div className="relative">
-                        <button
-                          className="px-2 py-1 rounded hover:bg-gray-100 dark:hover:bg-gray-800"
-                          onClick={() => onDelete(inv._id)}
-                          title="Delete"
-                        >
-                          ⋯
-                        </button>
-                      </div>
+                      <button
+                        className="rounded-lg border border-gray-200 dark:border-gray-800 px-3 py-2 text-sm"
+                        onClick={() => onDelete(inv._id)}
+                        title="Delete"
+                      >
+                        Delete
+                      </button>
                     </div>
                   </div>
                 ))}

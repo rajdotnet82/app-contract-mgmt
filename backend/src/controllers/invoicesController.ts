@@ -1,278 +1,151 @@
-import { Request, Response } from "express";
-import InvoiceModel, { InvoiceStatus, InvoiceLineItem } from "../models/Invoice";
+// server/src/controllers/invoices.controller.ts
+import Invoice from "../models/Invoice";
 import Organization from "../models/Organization";
 
-const ALLOWED_SORT = new Set(["createdAt", "invoiceDate", "dueDate", "number", "balanceDue"]);
-
-function toNumber(value: any, fallback = 0): number {
-  const n = Number(value);
-  return Number.isFinite(n) ? n : fallback;
-}
-
-function computeLineItems(items: any[]): InvoiceLineItem[] {
-  const safeItems = (items ?? []).map((li) => {
-    const rawDesc = String(li?.description ?? "");
-    const desc = rawDesc.trim();
-
-    const rate = toNumber(li?.rate, 0);
-    const qty = toNumber(li?.qty, 1); // default qty to 1 if missing
-
-    // Mongoose requires description, so never allow empty
-    const safeDescription = desc.length > 0 ? desc : "Item";
-
-    const amount =
-      Number.isFinite(Number(li?.amount))
-        ? toNumber(li.amount, rate * qty)
-        : rate * qty;
-
-    return {
-      description: safeDescription,
-      rate,
-      qty,
-      amount,
-    };
-  });
-
-  // If nothing provided, still create one default line
-  return safeItems.length > 0
-    ? safeItems
-    : [{ description: "Item", rate: 0, qty: 1, amount: 0 }];
-}
-
-function computeTotals(params: {
-  lineItems: InvoiceLineItem[];
-  taxPercent?: any;
-  paidAmount?: any;
-}) {
-  const subtotal = params.lineItems.reduce((sum, li) => sum + toNumber(li.amount, 0), 0);
-  const taxPercent = Math.max(0, toNumber(params.taxPercent, 0));
-  const taxAmount = subtotal * (taxPercent / 100);
-  const total = subtotal + taxAmount;
-
-  const paidAmount = Math.max(0, toNumber(params.paidAmount, 0));
-  const balanceDue = Math.max(0, total - paidAmount);
-
+function hydrateFromOrg(org: any) {
   return {
-    taxPercent,
-    subtotal,
-    taxAmount,
-    total,
-    paidAmount,
-    balanceDue,
+    name: org?.name ?? "",
+    email: org?.email ?? "",
+    phone: org?.phone ?? "",
+    addressLine1: org?.addressLine1 ?? "",
+    addressLine2: org?.addressLine2 ?? "",
+    city: org?.city ?? "",
+    state: org?.state ?? "",
+    postalCode: org?.postalCode ?? "",
+    country: org?.country ?? "",
+    businessNumber: org?.businessNumber ?? "",
+    logoUrl: org?.logoUrl ?? "",
   };
 }
 
-function normalizeStatus(raw?: any): InvoiceStatus | undefined {
-  if (!raw) return undefined;
-  const s = String(raw);
-  if (s === "Draft" || s === "Sent" || s === "Paid" || s === "Void") return s;
-  return undefined;
+function recalcTotals(invoice: any) {
+  const items = Array.isArray(invoice.lineItems) ? invoice.lineItems : [];
+  for (const li of items) {
+    const rate = Number(li.rate ?? 0);
+    const qty = Number(li.qty ?? 0);
+    li.amount = Number((rate * qty).toFixed(2));
+  }
+
+  const subtotal = Number(items.reduce((s: number, x: any) => s + Number(x.amount ?? 0), 0).toFixed(2));
+  const taxPercent = Number(invoice.taxPercent ?? 0);
+  const taxAmount = Number(((subtotal * taxPercent) / 100).toFixed(2));
+  const total = Number((subtotal + taxAmount).toFixed(2));
+  const paidAmount = Number(invoice.paidAmount ?? 0);
+  const balanceDue = Number((total - paidAmount).toFixed(2));
+
+  invoice.subtotal = subtotal;
+  invoice.taxAmount = taxAmount;
+  invoice.total = total;
+  invoice.balanceDue = balanceDue;
 }
 
-export async function listInvoices(req: Request, res: Response) {
-  const {
-    q = "",
-    status,
-    sortBy = "invoiceDate",
-    sortDir = "desc",
-  } = req.query as {
-    q?: string;
-    status?: string;
-    sortBy?: string;
-    sortDir?: string;
-  };
+export async function listInvoices(req: any, res: any) {
+  const orgId = req.user?.orgId || req.user?.activeOrgId;
+  const q = String(req.query.q ?? "").trim();
 
-  const orgId = req.activeOrgId;
-  if (!orgId) return res.status(403).json({ code: "ORG_REQUIRED" });
-
-  // 🔒 Multi-tenant boundary: ALWAYS scope invoices to current org.
   const filter: any = { orgId };
+  if (q) filter.number = { $regex: q, $options: "i" };
 
-  const s = String(q || "").trim();
-  if (s) {
-    // Combine orgId + search safely
-    filter.$and = [
-      { orgId },
-      {
-        $or: [
-          { number: { $regex: s, $options: "i" } },
-          { "billTo.name": { $regex: s, $options: "i" } },
-          { "billTo.email": { $regex: s, $options: "i" } },
-        ],
-      },
-    ];
-    delete filter.orgId;
+  const invoices = await Invoice.find(filter).sort({ invoiceDate: -1 }).lean();
+  res.json(invoices);
+}
+
+export async function getInvoice(req: any, res: any) {
+  const orgId = req.user?.orgId || req.user?.activeOrgId;
+  const invoice = await Invoice.findOne({ _id: req.params.id, orgId });
+  if (!invoice) return res.status(404).json({ error: "Not found" });
+
+  // ✅ make sure from is hydrated if org has new details
+  const org = await Organization.findById(orgId).lean();
+  if (org) {
+    invoice.from = hydrateFromOrg(org);
+    await invoice.save();
   }
 
-  const normalizedStatus = normalizeStatus(status);
-  if (normalizedStatus) filter.status = normalizedStatus;
-
-  const sortField = ALLOWED_SORT.has(sortBy) ? sortBy : "invoiceDate";
-  const direction = String(sortDir).toLowerCase() === "asc" ? 1 : -1;
-
-  const items = await InvoiceModel.find(filter).sort({ [sortField]: direction });
-  res.json(items);
+  res.json(invoice);
 }
 
-export async function getInvoice(req: Request, res: Response) {
-  const { id } = req.params;
-  const orgId = req.activeOrgId;
-  if (!orgId) return res.status(403).json({ code: "ORG_REQUIRED" });
+export async function createInvoice(req: any, res: any) {
+  const orgId = req.user?.orgId || req.user?.activeOrgId;
+  if (!orgId) return res.status(400).json({ error: "No org" });
 
-  const item = await InvoiceModel.findOne({ _id: id, orgId });
-  if (!item) return res.status(404).json({ message: "Invoice not found" });
+  const org = await Organization.findById(orgId).lean();
+  if (!org) return res.status(404).json({ error: "Org not found" });
 
-  res.json(item);
-}
-
-export async function createInvoice(req: Request, res: Response) {
   const body = req.body ?? {};
-  const orgId = req.activeOrgId;
-  const fromUserId = req.userId;
 
-  if (!orgId) return res.status(403).json({ code: "ORG_REQUIRED" });
-
-  // Defaults that make "New invoice" work even if UI sends minimal payload.
-  const now = new Date();
-  const generatedNumber =
-    body.number ??
-    `INV-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(
-      now.getDate()
-    ).padStart(2, "0")}-${String(Math.floor(Math.random() * 10000)).padStart(4, "0")}`;
-
-  // Use org name as a sensible default for the "from" party.
-  let orgName: string | undefined;
-  const org = await Organization.findById(orgId).select("name");
-  orgName = org?.name;
-
-  const fromParty = body.from ?? { name: orgName ?? "My Organization" };
-  const billToParty = body.billTo ?? { name: "Client" };
-
-  const lineItems = computeLineItems(body.lineItems ?? []);
-  const totals = computeTotals({
-    lineItems,
-    taxPercent: body.taxPercent,
-    paidAmount: body.paidAmount,
-  });
-
-  const doc = await InvoiceModel.create({
+  const invoice = new Invoice({
     orgId,
-    fromUserId: fromUserId ?? undefined,
+    fromUserId: req.user?._id,
 
-    number: generatedNumber,
-    status: normalizeStatus(body.status) ?? "Draft",
+    clientId: body.clientId || undefined,
+
+    number: body.number,
+    status: body.status ?? "Draft",
     currency: body.currency ?? "USD",
-
-    invoiceDate: body.invoiceDate ? new Date(body.invoiceDate) : now,
+    invoiceDate: body.invoiceDate ? new Date(body.invoiceDate) : new Date(),
     dueDate: body.dueDate ? new Date(body.dueDate) : undefined,
-    terms: body.terms,
 
-    from: fromParty,
-    billTo: billToParty,
+    from: hydrateFromOrg(org), // ✅ FULL org snapshot
+    billTo: body.billTo ?? undefined,
+    lineItems: body.lineItems ?? [],
 
-    lineItems,
+    taxPercent: body.taxPercent ?? 0,
+    paidAmount: body.paidAmount ?? 0,
+    notes: body.notes ?? "",
 
-    taxPercent: totals.taxPercent,
-    subtotal: totals.subtotal,
-    taxAmount: totals.taxAmount,
-    total: totals.total,
-
-    paidAmount: totals.paidAmount,
-    balanceDue: totals.balanceDue,
-
-    notes: body.notes,
-
-    activity: [
-      {
-        type: "Created",
-        message: "Invoice created",
-        at: new Date(),
-      },
-    ],
+    activity: [{ type: "Created", message: "Invoice created", at: new Date() }],
   });
 
-  res.status(201).json(doc);
+  recalcTotals(invoice);
+
+  await invoice.save();
+  res.status(201).json(invoice);
 }
 
-export async function updateInvoice(req: Request, res: Response) {
-  const { id } = req.params;
+export async function updateInvoice(req: any, res: any) {
+  const orgId = req.user?.orgId || req.user?.activeOrgId;
+  const invoice = await Invoice.findOne({ _id: req.params.id, orgId });
+  if (!invoice) return res.status(404).json({ error: "Not found" });
+
+  const org = await Organization.findById(orgId).lean();
+  if (!org) return res.status(404).json({ error: "Org not found" });
+
   const body = req.body ?? {};
 
-  const orgId = req.activeOrgId;
-  if (!orgId) return res.status(403).json({ code: "ORG_REQUIRED" });
+  // standard fields
+  if (body.clientId !== undefined) invoice.clientId = body.clientId || undefined;
+  if (body.number !== undefined) invoice.number = body.number;
+  if (body.status !== undefined) invoice.status = body.status;
+  if (body.currency !== undefined) invoice.currency = body.currency;
+  if (body.invoiceDate !== undefined) invoice.invoiceDate = new Date(body.invoiceDate);
+  if (body.dueDate !== undefined) invoice.dueDate = body.dueDate ? new Date(body.dueDate) : undefined;
+  if (body.notes !== undefined) invoice.notes = body.notes;
 
-  const existing = await InvoiceModel.findOne({ _id: id, orgId });
-  if (!existing) return res.status(404).json({ message: "Invoice not found" });
+  // billTo/lineItems/tax/paid
+  if (body.billTo !== undefined) invoice.billTo = body.billTo || undefined;
+  if (body.lineItems !== undefined) invoice.lineItems = body.lineItems || [];
+  if (body.taxPercent !== undefined) invoice.taxPercent = Number(body.taxPercent ?? 0);
+  if (body.paidAmount !== undefined) invoice.paidAmount = Number(body.paidAmount ?? 0);
 
-  const lineItems = computeLineItems(body.lineItems ?? existing.lineItems);
-  const totals = computeTotals({
-    lineItems,
-    taxPercent: body.taxPercent ?? existing.taxPercent,
-    paidAmount: body.paidAmount ?? existing.paidAmount,
-  });
+  // ✅ ALWAYS re-hydrate from org snapshot on update
+  invoice.from = hydrateFromOrg(org);
 
-  const nextStatus = normalizeStatus(body.status) ?? existing.status;
+  recalcTotals(invoice);
 
-  const activity = [...(existing.activity ?? [])];
-  activity.push({ type: "Updated", message: "Invoice updated", at: new Date() });
-
-  if (nextStatus !== existing.status) {
-    activity.push({
-      type: "StatusChanged",
-      message: `Status changed: ${existing.status} → ${nextStatus}`,
-      at: new Date(),
-    });
+  // activity is a Mongoose DocumentArray. Don't overwrite it with [].
+  if (!invoice.activity) {
+    // In practice this is usually already initialized by schema defaults.
+    (invoice as any).activity = [];
   }
+  invoice.activity.push({ type: "Updated", message: "Invoice updated", at: new Date() } as any);
 
-  existing.number = body.number ?? existing.number;
-  existing.status = nextStatus;
-
-  existing.currency = body.currency ?? existing.currency;
-
-  if (body.invoiceDate) existing.invoiceDate = new Date(body.invoiceDate);
-  if (body.dueDate !== undefined) existing.dueDate = body.dueDate ? new Date(body.dueDate) : undefined;
-  if (body.terms !== undefined) existing.terms = body.terms;
-
-  if (body.from) existing.from = body.from;
-  if (body.billTo) existing.billTo = body.billTo;
-
-  existing.lineItems = lineItems;
-
-  existing.taxPercent = totals.taxPercent;
-  existing.subtotal = totals.subtotal;
-  existing.taxAmount = totals.taxAmount;
-  existing.total = totals.total;
-
-  existing.paidAmount = totals.paidAmount;
-  existing.balanceDue = totals.balanceDue;
-
-  if (body.notes !== undefined) existing.notes = body.notes;
-
-  existing.activity = activity;
-
-  await existing.save();
-
-  const updated = await InvoiceModel.findOne({ _id: existing._id, orgId });
-  res.json(updated ?? existing);
+  await invoice.save();
+  res.json(invoice);
 }
 
-export async function deleteInvoice(req: Request, res: Response) {
-  const { id } = req.params;
-
-  const orgId = req.activeOrgId;
-  if (!orgId) return res.status(403).json({ code: "ORG_REQUIRED" });
-
-  const deleted = await InvoiceModel.findOneAndDelete({ _id: id, orgId });
-  if (!deleted) return res.status(404).json({ message: "Invoice not found" });
-
-  res.json({ ok: true });
-}
-
-// ✅ Convenience endpoint: clear all invoices in the CURRENT org
-export async function purgeInvoices(req: Request, res: Response) {
-  const orgId = req.activeOrgId;
-  if (!orgId) return res.status(403).json({ code: "ORG_REQUIRED" });
-
-  const result = await InvoiceModel.deleteMany({ orgId });
-  res.json({ ok: true, deletedCount: result.deletedCount ?? 0 });
+export async function deleteInvoice(req: any, res: any) {
+  const orgId = req.user?.orgId || req.user?.activeOrgId;
+  const result = await Invoice.deleteOne({ _id: req.params.id, orgId });
+  res.json({ ok: result.deletedCount === 1 });
 }

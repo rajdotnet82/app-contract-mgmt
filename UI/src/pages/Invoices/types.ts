@@ -1,3 +1,4 @@
+// UI/src/pages/Invoices/types.ts
 export type InvoiceStatus = "Draft" | "Sent" | "Paid" | "Void";
 
 export type InvoiceTab = "All" | "Outstanding" | "Paid";
@@ -18,20 +19,23 @@ export type InvoiceParty = {
   name: string;
   email?: string;
   phone?: string;
+
   addressLine1?: string;
   addressLine2?: string;
   city?: string;
   state?: string;
   postalCode?: string;
   country?: string;
+
   businessNumber?: string;
   logoUrl?: string;
 };
 
 export type Invoice = {
   _id: string;
+  orgId: string;
 
-  // Optional links used by dropdown auto-populate
+  // legacy, keep optional (backend may still store it)
   fromUserId?: string;
   clientId?: string;
 
@@ -43,10 +47,10 @@ export type Invoice = {
   dueDate?: string;
   terms?: string;
 
-  from: InvoiceParty;
-  billTo: InvoiceParty;
-
-  lineItems: InvoiceLineItem[];
+  // ✅ optional so list endpoints / older docs don't break build
+  from?: InvoiceParty;
+  billTo?: InvoiceParty;
+  lineItems?: InvoiceLineItem[];
 
   taxPercent?: number;
   subtotal: number;
@@ -60,10 +64,4 @@ export type Invoice = {
 
   createdAt?: string;
   updatedAt?: string;
-};
-
-export type OrgAdminForInvoiceFrom = {
-  id: string;
-  name: string;
-  email?: string;
 };

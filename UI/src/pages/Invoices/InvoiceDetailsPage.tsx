@@ -1,5 +1,6 @@
+// UI/src/pages/Invoices/InvoiceDetailsPage.tsx
 import { useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router";
+import { Link, useParams } from "react-router-dom";
 import { getInvoice, updateInvoice } from "./api";
 import type { Invoice } from "./types";
 import InvoicePreview from "./InvoicePreview";
@@ -84,12 +85,11 @@ export default function InvoiceDetailsPage() {
             Edit
           </button>
 
-          {/* ✅ PDF only in Preview mode */}
           {tab === "Preview" && (
             <button
               className="rounded-lg border border-gray-200 dark:border-gray-800 px-3 py-2 text-sm"
               onClick={() => window.print()}
-              title="Print/PDF (basic)"
+              title="Print/PDF"
             >
               PDF
             </button>

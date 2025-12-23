@@ -1,22 +1,6 @@
+// UI/src/pages/Invoices/api.ts
 import http from "../../api/http";
-import { OrgAdminForInvoiceFrom } from "./types";
-
-export type Invoice = {
-  _id: string;
-  orgId: string;
-  number: string;
-  status: "Draft" | "Sent" | "Paid" | "Void";
-  currency: string;
-  invoiceDate: string;
-  dueDate?: string;
-  subtotal: number;
-  taxAmount: number;
-  total: number;
-  paidAmount: number;
-  balanceDue: number;
-  createdAt?: string;
-  updatedAt?: string;
-};
+import type { Invoice, InvoiceParty } from "./types";
 
 export async function listInvoices(params?: {
   q?: string;
@@ -48,36 +32,8 @@ export async function deleteInvoice(id: string) {
   return data;
 }
 
-// Optional: only if you want UI button later
-export async function purgeInvoices() {
-  const { data } = await http.delete<{ ok: boolean; deletedCount: number }>(`/api/invoices/purge`);
+// Optional helper if you still want org details in UI (not required after backend hydration)
+export async function getActiveOrgForInvoiceFrom() {
+  const { data } = await http.get<InvoiceParty>("/api/orgs/active");
   return data;
-}
-
-export async function listOrgAdminsForInvoiceFrom(): Promise<OrgAdminForInvoiceFrom[]> {
-  try {
-    // If you already have an endpoint for org admins, use it:
-    // const { data } = await http.get<OrgAdminForInvoiceFrom[]>("/api/orgs/admins");
-    // return data;
-
-    // Safe fallback: just return the current user as the "From" option
-    const { data } = await http.get<any>("/api/me");
-
-    const name =
-      data?.name ||
-      data?.fullName ||
-      [data?.firstName, data?.lastName].filter(Boolean).join(" ") ||
-      data?.email ||
-      "Me";
-
-    return [
-      {
-        id: String(data?._id || data?.id || "me"),
-        name,
-        email: data?.email,
-      },
-    ];
-  } catch {
-    return [];
-  }
 }

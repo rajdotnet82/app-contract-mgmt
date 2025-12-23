@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import http from "../../api/http";
 import type { Invoice } from "./types";
 import { toAssetUrl } from "../../utils/assetUrl";
@@ -108,7 +108,6 @@ export default function InvoicePreview({ invoice }: { invoice: Invoice }) {
         <div className="flex items-start gap-4">
           <div className="shrink-0">
             {logoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={toAssetUrl(logoUrl)}
                 alt="Logo"

@@ -7,7 +7,10 @@ declare global {
     interface Request {
       userId?: string;
       activeOrgId?: string;
-      auth?: any; // express-oauth2-jwt-bearer sets req.auth
+      // NOTE: do NOT redeclare `auth` here.
+      // express-oauth2-jwt-bearer already augments Express.Request with:
+      //   auth?: VerifyJwtResult
+      // Re-declaring it as `any` causes TS2717.
     }
   }
 }
@@ -40,9 +43,8 @@ export async function attachContext(req: Request, res: Response, next: NextFunct
     // 2) Load memberships
     const memberships = await UserOrganization.find({ userId: user._id }).lean();
 
-    // ✅ IMPORTANT CHANGE:
     // If user has NO orgs, we do NOT auto-create one.
-    // We still set req.userId so onboarding/invite endpoints can work.
+    // Still set req.userId so onboarding/invite endpoints can work.
     if (memberships.length === 0) {
       req.userId = String(user._id);
       req.activeOrgId = undefined;

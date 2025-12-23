@@ -1,7 +1,7 @@
+// UI/src/pages/Invoices/InvoiceEditForm.tsx
 import { useEffect, useMemo, useState } from "react";
 import type { Client } from "../Clients/types";
 import { listClients } from "../Clients/api";
-import { listOrgAdminsForInvoiceFrom, type OrgAdminUser } from "./api";
 import type { Invoice, InvoiceLineItem, InvoiceParty } from "./types";
 
 function toNum(v: any, fallback = 0) {
@@ -9,52 +9,52 @@ function toNum(v: any, fallback = 0) {
   return Number.isFinite(n) ? n : fallback;
 }
 
+function clean(v: any) {
+  const s = String(v ?? "").trim();
+  return s.length ? s : undefined;
+}
+
 function normalizeParty(p?: Partial<InvoiceParty>): InvoiceParty {
   return {
     name: String(p?.name ?? "").trim(),
-    email: p?.email ? String(p.email).trim() : undefined,
-    phone: p?.phone ? String(p.phone).trim() : undefined,
-    addressLine1: p?.addressLine1 ? String(p.addressLine1).trim() : undefined,
-    addressLine2: p?.addressLine2 ? String(p.addressLine2).trim() : undefined,
-    city: p?.city ? String(p.city).trim() : undefined,
-    state: p?.state ? String(p.state).trim() : undefined,
-    postalCode: p?.postalCode ? String(p.postalCode).trim() : undefined,
-    country: p?.country ? String(p.country).trim() : undefined,
-    businessNumber: p?.businessNumber
-      ? String(p.businessNumber).trim()
-      : undefined,
-    logoUrl: p?.logoUrl ? String(p.logoUrl).trim() : undefined,
+    email: clean(p?.email),
+    phone: clean(p?.phone),
+    addressLine1: clean(p?.addressLine1),
+    addressLine2: clean(p?.addressLine2),
+    city: clean(p?.city),
+    state: clean(p?.state),
+    postalCode: clean(p?.postalCode),
+    country: clean(p?.country),
+    businessNumber: clean(p?.businessNumber),
+    logoUrl: clean(p?.logoUrl),
   };
 }
 
-function adminToFromParty(admin: OrgAdminUser): InvoiceParty {
-  const a = admin.address ?? {};
+function clientToBillToParty(client: Client): InvoiceParty {
   return normalizeParty({
-    name: admin.fullName || admin.email,
-    email: admin.email,
-    phone: admin.phone,
-    addressLine1: a.line1,
-    addressLine2: a.line2,
-    city: a.city,
-    state: a.state,
-    postalCode: a.postalCode,
-    country: a.country,
+    name: (client.fullName || "").trim(),
+    email: (client.email || "").trim(),
+    phone: (client.phone || "").trim(),
+    addressLine1: client.addressLine1,
+    addressLine2: client.addressLine2,
+    city: client.city,
+    state: client.state,
+    postalCode: client.postalCode,
+    country: client.country,
   });
 }
 
-function clientToBillToParty(client: Client): InvoiceParty {
-  const a = client.address ?? {};
-  return normalizeParty({
-    name: (client.billingName || client.displayName || "").trim(),
-    email: (client.billingEmail || client.primaryEmail || "").trim(),
-    phone: (client.billingPhone || client.primaryPhone || "").trim(),
-    addressLine1: a.line1,
-    addressLine2: a.line2,
-    city: a.city,
-    state: a.state,
-    postalCode: a.postalCode,
-    country: a.country,
-  });
+function ensureInvoiceDefaults(inv: Invoice): Invoice {
+  return {
+    ...inv,
+    from: inv.from ? normalizeParty(inv.from) : normalizeParty({ name: "" }),
+    billTo: inv.billTo
+      ? normalizeParty(inv.billTo)
+      : normalizeParty({ name: "" }),
+    lineItems: Array.isArray(inv.lineItems) ? inv.lineItems : [],
+    taxPercent: inv.taxPercent ?? 0,
+    paidAmount: inv.paidAmount ?? 0,
+  };
 }
 
 export default function InvoiceEditForm({
@@ -66,19 +66,18 @@ export default function InvoiceEditForm({
   saving: boolean;
   onSave: (patch: Partial<Invoice>) => void;
 }) {
-  const [draft, setDraft] = useState<Invoice>(invoice);
+  const [draft, setDraft] = useState<Invoice>(() =>
+    ensureInvoiceDefaults(invoice)
+  );
 
-  const [admins, setAdmins] = useState<OrgAdminUser[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [loadingLookups, setLoadingLookups] = useState(true);
   const [lookupError, setLookupError] = useState<string | null>(null);
 
-  // Reload draft when invoice changes (e.g., navigating between invoices)
   useEffect(() => {
-    setDraft(invoice);
+    setDraft(ensureInvoiceDefaults(invoice));
   }, [invoice]);
 
-  // Load dropdown sources
   useEffect(() => {
     let cancelled = false;
 
@@ -87,18 +86,12 @@ export default function InvoiceEditForm({
         setLoadingLookups(true);
         setLookupError(null);
 
-        const [a, c] = await Promise.all([
-          listOrgAdminsForInvoiceFrom(),
-          listClients({}),
-        ]);
-
+        const c = await listClients({});
         if (cancelled) return;
-
-        setAdmins(a ?? []);
         setClients(c ?? []);
       } catch (e: any) {
         if (cancelled) return;
-        setLookupError(e?.message ?? "Failed to load From/Clients lists");
+        setLookupError(e?.message ?? "Failed to load clients");
       } finally {
         if (!cancelled) setLoadingLookups(false);
       }
@@ -109,48 +102,30 @@ export default function InvoiceEditForm({
     };
   }, []);
 
-  // If existing invoice has from/billTo snapshots but no ids, try to infer selection once.
+  // best-effort: if invoice has billTo email but no clientId, match it
   useEffect(() => {
     if (loadingLookups) return;
-    if (!admins.length && !clients.length) return;
+    if (!clients.length) return;
 
     setDraft((d) => {
-      let next = d;
+      const next = ensureInvoiceDefaults(d);
 
-      // Infer fromUserId by email match (best-effort)
-      if (!next.fromUserId && next.from?.email) {
-        const match = admins.find(
-          (a) => a.email?.toLowerCase() === next.from.email?.toLowerCase()
-        );
-        if (match) {
-          next = {
-            ...next,
-            fromUserId: match.id,
-            from: adminToFromParty(match),
-          };
-        }
-      }
-
-      // Infer clientId by billing/primary email match (best-effort)
       if (!next.clientId && next.billTo?.email) {
         const target = next.billTo.email.toLowerCase();
-        const match = clients.find((c) => {
-          const billing = (c.billingEmail || "").toLowerCase();
-          const primary = (c.primaryEmail || "").toLowerCase();
-          return billing === target || primary === target;
-        });
+        const match = clients.find(
+          (c) => (c.email || "").toLowerCase() === target
+        );
         if (match) {
-          next = {
+          return {
             ...next,
             clientId: match._id,
             billTo: clientToBillToParty(match),
           };
         }
       }
-
       return next;
     });
-  }, [loadingLookups, admins, clients]);
+  }, [loadingLookups, clients]);
 
   const computed = useMemo(() => {
     const lineItems = (draft.lineItems ?? []).map((li) => {
@@ -160,8 +135,17 @@ export default function InvoiceEditForm({
       return { ...li, amount };
     });
 
-    return { lineItems };
-  }, [draft.lineItems]);
+    const subtotal = Number(
+      lineItems.reduce((s, x) => s + (x.amount ?? 0), 0).toFixed(2)
+    );
+    const taxPercent = toNum(draft.taxPercent, 0);
+    const taxAmount = Number(((subtotal * taxPercent) / 100).toFixed(2));
+    const total = Number((subtotal + taxAmount).toFixed(2));
+    const paidAmount = toNum(draft.paidAmount, 0);
+    const balanceDue = Number((total - paidAmount).toFixed(2));
+
+    return { lineItems, subtotal, taxAmount, total, balanceDue };
+  }, [draft.lineItems, draft.taxPercent, draft.paidAmount]);
 
   const updateLine = (idx: number, patch: Partial<InvoiceLineItem>) => {
     const next = [...(draft.lineItems ?? [])];
@@ -185,24 +169,6 @@ export default function InvoiceEditForm({
     setDraft({ ...draft, lineItems: next });
   };
 
-  const onSelectFrom = (fromUserId: string) => {
-    const admin = admins.find((a) => a.id === fromUserId);
-    if (!admin) {
-      setDraft({
-        ...draft,
-        fromUserId: fromUserId || undefined,
-        from: normalizeParty(draft.from),
-      });
-      return;
-    }
-
-    setDraft({
-      ...draft,
-      fromUserId: admin.id,
-      from: adminToFromParty(admin),
-    });
-  };
-
   const onSelectClient = (clientId: string) => {
     const client = clients.find((c) => c._id === clientId);
     if (!client) {
@@ -213,7 +179,6 @@ export default function InvoiceEditForm({
       });
       return;
     }
-
     setDraft({
       ...draft,
       clientId: client._id,
@@ -222,11 +187,8 @@ export default function InvoiceEditForm({
   };
 
   const save = () => {
-    // Send ids + snapshots (backend re-snapshots if ids are provided)
     onSave({
-      fromUserId: draft.fromUserId,
       clientId: draft.clientId,
-
       number: draft.number,
       status: draft.status,
       invoiceDate: draft.invoiceDate,
@@ -234,13 +196,19 @@ export default function InvoiceEditForm({
       terms: draft.terms,
       currency: draft.currency,
 
+      // from snapshot comes from backend hydration now
       from: draft.from,
       billTo: draft.billTo,
 
       lineItems: computed.lineItems,
-      taxPercent: draft.taxPercent ?? 0,
-      paidAmount: draft.paidAmount ?? 0,
+      taxPercent: toNum(draft.taxPercent, 0),
+      paidAmount: toNum(draft.paidAmount, 0),
       notes: draft.notes,
+
+      subtotal: computed.subtotal,
+      taxAmount: computed.taxAmount,
+      total: computed.total,
+      balanceDue: computed.balanceDue,
     });
   };
 
@@ -270,7 +238,7 @@ export default function InvoiceEditForm({
           </label>
           <input
             type="date"
-            value={draft.invoiceDate?.slice(0, 10)}
+            value={(draft.invoiceDate ?? "").slice(0, 10)}
             onChange={(e) =>
               setDraft({ ...draft, invoiceDate: e.target.value })
             }
@@ -295,25 +263,6 @@ export default function InvoiceEditForm({
         <section className="space-y-2">
           <div className="text-sm font-semibold text-gray-900 dark:text-gray-100">
             From
-          </div>
-
-          <div>
-            <label className="text-xs text-gray-600 dark:text-gray-300">
-              Select admin (same org)
-            </label>
-            <select
-              value={draft.fromUserId ?? ""}
-              onChange={(e) => onSelectFrom(e.target.value)}
-              disabled={saving || loadingLookups}
-              className="mt-1 w-full rounded-lg border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950 px-3 py-2 text-sm"
-            >
-              <option value="">Select From</option>
-              {admins.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {a.fullName || a.email} {a.role ? `(${a.role})` : ""}
-                </option>
-              ))}
-            </select>
           </div>
 
           <input
@@ -360,7 +309,7 @@ export default function InvoiceEditForm({
               <option value="">Select Bill To</option>
               {clients.map((c) => (
                 <option key={c._id} value={c._id}>
-                  {c.displayName}
+                  {c.fullName}
                 </option>
               ))}
             </select>
@@ -464,7 +413,7 @@ export default function InvoiceEditForm({
         </div>
       </section>
 
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <section className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div>
           <label className="text-xs text-gray-600 dark:text-gray-300">
             Tax %
@@ -510,6 +459,18 @@ export default function InvoiceEditForm({
             <option>Void</option>
           </select>
         </div>
+
+        <div className="text-right">
+          <div className="text-xs text-gray-600 dark:text-gray-300 mt-1">
+            Total
+          </div>
+          <div className="text-lg font-semibold text-gray-900 dark:text-gray-100">
+            {computed.total.toFixed(2)}
+          </div>
+          <div className="text-xs text-gray-500 dark:text-gray-400">
+            Balance due: {computed.balanceDue.toFixed(2)}
+          </div>
+        </div>
       </section>
 
       <section className="space-y-2">
@@ -528,11 +489,12 @@ export default function InvoiceEditForm({
         <button
           className="rounded-lg border border-gray-200 dark:border-gray-800 px-4 py-2 text-sm"
           type="button"
-          onClick={() => setDraft(invoice)}
+          onClick={() => setDraft(ensureInvoiceDefaults(invoice))}
           disabled={saving}
         >
           Reset
         </button>
+
         <button
           className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-60"
           type="button"

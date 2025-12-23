@@ -1,16 +1,27 @@
-import mongoose, { Schema, Document } from "mongoose";
+import mongoose, { Schema } from "mongoose";
 
-export interface Organization extends Document {
-  name: string;
-  logoUrl?: string;
-}
-
-const OrganizationSchema = new Schema<Organization>(
+const OrganizationSchema = new Schema(
   {
-    name: { type: String, required: true, trim: true },
-    logoUrl: { type: String, trim: true },
+    name: { type: String, required: true },
+    createdByUserId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+
+    // ✅ Contact info (for Invoice "From")
+    email: { type: String },
+    phone: { type: String },
+
+    addressLine1: { type: String },
+    addressLine2: { type: String },
+    city: { type: String },
+    state: { type: String },
+    postalCode: { type: String },
+    country: { type: String },
+
+    businessNumber: { type: String },
+    website: { type: String },
+
+    logoUrl: { type: String },
   },
   { timestamps: true }
 );
 
-export default mongoose.model<Organization>("Organization", OrganizationSchema);
+export default mongoose.model("Organization", OrganizationSchema);

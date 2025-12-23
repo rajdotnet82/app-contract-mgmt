@@ -86,25 +86,25 @@ export default function UserProfiles() {
     );
   }
 
-  // Optional: if you still use rename elsewhere
-  async function onRenameOrg(orgId: string, name: string) {
-    const { data } = await http.put<{
-      ok: boolean;
-      org: { _id?: string; id?: string; name: string; logoUrl?: string };
-    }>(`/api/orgs/${orgId}`, { name });
+  // // Optional: if you still use rename elsewhere
+  // async function onRenameOrg(orgId: string, name: string) {
+  //   const { data } = await http.put<{
+  //     ok: boolean;
+  //     org: { _id?: string; id?: string; name: string; logoUrl?: string };
+  //   }>(`/api/orgs/${orgId}`, { name });
 
-    // support either _id or id, depending on backend response
-    const updatedId = data.org._id ?? data.org.id ?? orgId;
+  //   // support either _id or id, depending on backend response
+  //   const updatedId = data.org._id ?? data.org.id ?? orgId;
 
-    setOrgs((prev) =>
-      prev.map((o) => (o.id === updatedId ? { ...o, name: data.org.name } : o))
-    );
+  //   setOrgs((prev) =>
+  //     prev.map((o) => (o.id === updatedId ? { ...o, name: data.org.name } : o))
+  //   );
 
-    // If renaming active org, update activeOrg too
-    if (activeOrg && activeOrg._id === updatedId) {
-      setActiveOrg((prev) => (prev ? { ...prev, name: data.org.name } : prev));
-    }
-  }
+  //   // If renaming active org, update activeOrg too
+  //   if (activeOrg && activeOrg._id === updatedId) {
+  //     setActiveOrg((prev) => (prev ? { ...prev, name: data.org.name } : prev));
+  //   }
+  // }
 
   return (
     <>

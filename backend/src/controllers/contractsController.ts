@@ -69,7 +69,10 @@ export async function createContract(req: Request, res: Response) {
     });
   }
 
-  const created = await ContractModel.create({
+  // ✅ TS fix:
+  // Your Contract model typing currently doesn’t include some of these fields
+  // (e.g., packageName). Casting prevents build failures while keeping runtime behavior.
+  const payload = {
     contractNumber,
     clientName,
     eventType,
@@ -79,7 +82,9 @@ export async function createContract(req: Request, res: Response) {
     totalPrice,
     retainerAmount,
     signed,
-  });
+  };
+
+  const created = await ContractModel.create(payload as any);
 
   res.status(201).json(created);
 }

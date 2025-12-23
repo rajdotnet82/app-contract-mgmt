@@ -1,17 +1,13 @@
 import { BrowserRouter as Router, Routes, Route } from "react-router";
-import { useEffect } from "react";
-import { useAuth0 } from "@auth0/auth0-react";
-
 import NotFound from "./pages/OtherPage/NotFound";
 import AppLayout from "./layout/AppLayout";
 import { ScrollToTop } from "./components/common/ScrollToTop";
 
 import RequireAuth from "./components/auth/RequireAuth";
 import RequireOrg from "./components/auth/RequireOrg";
-import { setTokenGetter } from "./components/auth/token";
 
 import Home from "./pages/Dashboard/Home";
-import UserProfiles from "./pages/UserProfiles";
+import ProfilePage from "./pages/Profile/ProfilePage";
 
 import ContractsPage from "./pages/Contracts/ContractsPage";
 import ContractCreatePage from "./pages/Contracts/ContractCreatePage";
@@ -30,22 +26,6 @@ import ClientDetailsPage from "./pages/Clients/ClientDetailsPage";
 import InvoicesPage from "./pages/Invoices/InvoicesPage";
 import InvoiceCreatePage from "./pages/Invoices/InvoiceCreatePage";
 import InvoiceDetailsPage from "./pages/Invoices/InvoiceDetailsPage";
-
-import Calendar from "./pages/Calendar";
-import Blank from "./pages/Blank";
-import FormElements from "./pages/Forms/FormElements";
-import BasicTables from "./pages/Tables/BasicTables";
-
-import Alerts from "./pages/UiElements/Alerts";
-import Avatars from "./pages/UiElements/Avatars";
-import Badges from "./pages/UiElements/Badges";
-import Buttons from "./pages/UiElements/Buttons";
-import Images from "./pages/UiElements/Images";
-import Videos from "./pages/UiElements/Videos";
-
-import LineChart from "./pages/Charts/LineChart";
-import BarChart from "./pages/Charts/BarChart";
-
 import OrgSetupPage from "./pages/Onboarding/OrgSetupPage";
 import InviteAcceptPage from "./pages/Invites/InviteAcceptPage";
 import { TokenBootstrap } from "./components/auth/TokenBootstrap";
@@ -118,7 +98,7 @@ export default function App() {
                 <Route path="/invoices/:id" element={<InvoiceDetailsPage />} />
 
                 {/* Others */}
-                <Route path="/profile" element={<UserProfiles />} />
+                <Route path="/profile" element={<ProfilePage />} />
                 {/* <Route path="/calendar" element={<Calendar />} />
                 <Route path="/blank" element={<Blank />} />
                 <Route path="/form-elements" element={<FormElements />} />
