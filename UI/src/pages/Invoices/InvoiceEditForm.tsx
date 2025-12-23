@@ -1,8 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import type { Client } from "../Clients/types";
 import { listClients } from "../Clients/api";
-import { listOrgAdminsForInvoiceFrom, type OrgAdminUser } from "./api";
-import type { Invoice, InvoiceLineItem, InvoiceParty } from "./types";
+import { listOrgAdminsForInvoiceFrom } from "./api";
+import type {
+  Invoice,
+  InvoiceLineItem,
+  InvoiceParty,
+  OrgAdminUser,
+} from "./types";
 
 function toNum(v: any, fallback = 0) {
   const n = Number(v);
@@ -43,17 +48,16 @@ function adminToFromParty(admin: OrgAdminUser): InvoiceParty {
 }
 
 function clientToBillToParty(client: Client): InvoiceParty {
-  const a = client.address ?? {};
   return normalizeParty({
-    name: (client.billingName || client.displayName || "").trim(),
-    email: (client.billingEmail || client.primaryEmail || "").trim(),
-    phone: (client.billingPhone || client.primaryPhone || "").trim(),
-    addressLine1: a.line1,
-    addressLine2: a.line2,
-    city: a.city,
-    state: a.state,
-    postalCode: a.postalCode,
-    country: a.country,
+    name: (client.fullName || "").trim(),
+    email: (client.email || "").trim(),
+    phone: (client.phone || "").trim(),
+    addressLine1: client.addressLine1,
+    addressLine2: client.addressLine2,
+    city: client.city,
+    state: client.state,
+    postalCode: client.postalCode,
+    country: client.country,
   });
 }
 
@@ -117,27 +121,27 @@ export default function InvoiceEditForm({
     setDraft((d) => {
       let next = d;
 
+      next.from = adminToFromParty(admins[0] ?? {});
       // Infer fromUserId by email match (best-effort)
-      if (!next.fromUserId && next.from?.email) {
-        const match = admins.find(
-          (a) => a.email?.toLowerCase() === next.from.email?.toLowerCase()
-        );
-        if (match) {
-          next = {
-            ...next,
-            fromUserId: match.id,
-            from: adminToFromParty(match),
-          };
-        }
-      }
+      // if (!next.fromUserId && next.from?.email) {
+      //   const match = admins.find(
+      //     (a) => a.email?.toLowerCase() === next.from.email?.toLowerCase()
+      //   );
+      //   if (match) {
+      //     next = {
+      //       ...next,
+      //       fromUserId: match.id,
+      //       from: adminToFromParty(match),
+      //     };
+      //   }
+      // }
 
       // Infer clientId by billing/primary email match (best-effort)
       if (!next.clientId && next.billTo?.email) {
         const target = next.billTo.email.toLowerCase();
         const match = clients.find((c) => {
-          const billing = (c.billingEmail || "").toLowerCase();
-          const primary = (c.primaryEmail || "").toLowerCase();
-          return billing === target || primary === target;
+          const billingEmail = (c.email || "").toLowerCase();
+          return billingEmail === target;
         });
         if (match) {
           next = {
@@ -187,6 +191,7 @@ export default function InvoiceEditForm({
 
   const onSelectFrom = (fromUserId: string) => {
     const admin = admins.find((a) => a.id === fromUserId);
+
     if (!admin) {
       setDraft({
         ...draft,
@@ -360,7 +365,7 @@ export default function InvoiceEditForm({
               <option value="">Select Bill To</option>
               {clients.map((c) => (
                 <option key={c._id} value={c._id}>
-                  {c.displayName}
+                  {c.fullName}
                 </option>
               ))}
             </select>

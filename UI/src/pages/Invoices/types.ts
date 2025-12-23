@@ -67,3 +67,19 @@ export type OrgAdminForInvoiceFrom = {
   name: string;
   email?: string;
 };
+
+export type OrgAdminUser = {
+  id: string;
+  fullName?: string;
+  email: string;
+  phone?: string;
+  role?: string;
+  address?: {
+    line1?: string;
+    line2?: string;
+    city?: string;
+    state?: string;
+    postalCode?: string;
+    country?: string;
+  };
+};

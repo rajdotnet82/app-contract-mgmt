@@ -1,5 +1,5 @@
 import http from "../../api/http";
-import { OrgAdminForInvoiceFrom } from "./types";
+import { OrgAdminUser } from "./types";
 
 export type Invoice = {
   _id: string;
@@ -54,7 +54,7 @@ export async function purgeInvoices() {
   return data;
 }
 
-export async function listOrgAdminsForInvoiceFrom(): Promise<OrgAdminForInvoiceFrom[]> {
+export async function listOrgAdminsForInvoiceFrom(): Promise<OrgAdminUser[]> {
   try {
     // If you already have an endpoint for org admins, use it:
     // const { data } = await http.get<OrgAdminForInvoiceFrom[]>("/api/orgs/admins");
@@ -62,21 +62,32 @@ export async function listOrgAdminsForInvoiceFrom(): Promise<OrgAdminForInvoiceF
 
     // Safe fallback: just return the current user as the "From" option
     const { data } = await http.get<any>("/api/me");
+    const orgData = await http.get<any>("/api/orgs/active");
 
-    const name =
-      data?.name ||
-      data?.fullName ||
-      [data?.firstName, data?.lastName].filter(Boolean).join(" ") ||
-      data?.email ||
-      "Me";
+    //can we wait here?
+    const orgName = orgData?.data?.name || "My Org";
 
-    return [
+    const user = data?.user || data;
+    const name = orgName || user?.fullName || "Me";
+
+    const result = [
       {
-        id: String(data?._id || data?.id || "me"),
-        name,
-        email: data?.email,
+        id: String(user?._id || user?.id || "me"),
+        fullName:name,
+        email: user?.email,
+        phone: user?.phone,
+        address: {
+          line1: user?.address?.line1,
+          line2: user?.address?.line2,
+          city: user?.address?.city,
+          state: user?.address?.state,
+          postalCode: user?.address?.postalCode,
+          country: user?.address?.country,
+        },
       },
     ];
+
+    return result;
   } catch {
     return [];
   }
