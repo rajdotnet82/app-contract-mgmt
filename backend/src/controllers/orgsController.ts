@@ -2,7 +2,7 @@ import Organization from "../models/Organization";
 import User from "../models/User";
 
 export async function createOrg(req: any, res: any) {
-  const userId = req.user?._id || req.user?.id;
+  const userId = req.userId;
   if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
   const name = String(req.body?.name ?? "").trim();
@@ -37,14 +37,8 @@ export async function createOrg(req: any, res: any) {
 }
 
 export async function getActiveOrg(req: any, res: any) {
-  const userId = req.user?._id || req.user?.id;
-  if (!userId) return res.status(401).json({ error: "Unauthorized" });
-
-  const user = await User.findById(userId).lean();
-  const orgId = user?.activeOrgId;
-  if (!orgId) {
-    return res.status(403).json({ code: "ORG_REQUIRED", message: "Organization setup required" });
-  }
+  const orgId = req.activeOrgId;
+  if (!orgId) return res.status(403).json({ code: "ORG_REQUIRED", message: "Organization setup required" });
 
   const org = await Organization.findById(orgId).lean();
   if (!org) return res.status(404).json({ error: "Org not found" });
@@ -53,14 +47,8 @@ export async function getActiveOrg(req: any, res: any) {
 }
 
 export async function updateActiveOrg(req: any, res: any) {
-  const userId = req.user?._id || req.user?.id;
-  if (!userId) return res.status(401).json({ error: "Unauthorized" });
-
-  const user = await User.findById(userId).lean();
-  const orgId = user?.activeOrgId;
-  if (!orgId) {
-    return res.status(403).json({ code: "ORG_REQUIRED", message: "Organization setup required" });
-  }
+  const orgId = req.activeOrgId;
+  if (!orgId) return res.status(403).json({ code: "ORG_REQUIRED", message: "Organization setup required" });
 
   const patch = req.body ?? {};
 

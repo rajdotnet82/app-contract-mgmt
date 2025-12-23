@@ -40,7 +40,8 @@ function recalcTotals(invoice: any) {
 }
 
 export async function listInvoices(req: any, res: any) {
-  const orgId = req.user?.orgId || req.user?.activeOrgId;
+  const orgId = req.activeOrgId;
+  if (!orgId) return res.status(403).json({ code: "ORG_REQUIRED" });
   const q = String(req.query.q ?? "").trim();
 
   const filter: any = { orgId };
@@ -51,7 +52,8 @@ export async function listInvoices(req: any, res: any) {
 }
 
 export async function getInvoice(req: any, res: any) {
-  const orgId = req.user?.orgId || req.user?.activeOrgId;
+  const orgId = req.activeOrgId;
+  if (!orgId) return res.status(403).json({ code: "ORG_REQUIRED" });
   const invoice = await Invoice.findOne({ _id: req.params.id, orgId });
   if (!invoice) return res.status(404).json({ error: "Not found" });
 
@@ -66,8 +68,8 @@ export async function getInvoice(req: any, res: any) {
 }
 
 export async function createInvoice(req: any, res: any) {
-  const orgId = req.user?.orgId || req.user?.activeOrgId;
-  if (!orgId) return res.status(400).json({ error: "No org" });
+  const orgId = req.activeOrgId;
+  if (!orgId) return res.status(403).json({ code: "ORG_REQUIRED" });
 
   const org = await Organization.findById(orgId).lean();
   if (!org) return res.status(404).json({ error: "Org not found" });
@@ -76,7 +78,7 @@ export async function createInvoice(req: any, res: any) {
 
   const invoice = new Invoice({
     orgId,
-    fromUserId: req.user?._id,
+    fromUserId: req.userId,
 
     clientId: body.clientId || undefined,
 
@@ -104,7 +106,8 @@ export async function createInvoice(req: any, res: any) {
 }
 
 export async function updateInvoice(req: any, res: any) {
-  const orgId = req.user?.orgId || req.user?.activeOrgId;
+  const orgId = req.activeOrgId;
+  if (!orgId) return res.status(403).json({ code: "ORG_REQUIRED" });
   const invoice = await Invoice.findOne({ _id: req.params.id, orgId });
   if (!invoice) return res.status(404).json({ error: "Not found" });
 
@@ -145,7 +148,8 @@ export async function updateInvoice(req: any, res: any) {
 }
 
 export async function deleteInvoice(req: any, res: any) {
-  const orgId = req.user?.orgId || req.user?.activeOrgId;
+  const orgId = req.activeOrgId;
+  if (!orgId) return res.status(403).json({ code: "ORG_REQUIRED" });
   const result = await Invoice.deleteOne({ _id: req.params.id, orgId });
   res.json({ ok: result.deletedCount === 1 });
 }
