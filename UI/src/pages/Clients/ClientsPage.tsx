@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { deleteClient, listClients } from "./api";
 import type { Client } from "./types";
+import { useNavigate } from "react-router-dom";
 
 function clientLabel(c: Client) {
   // Prefer fullName. If it’s generic, fall back to first+last.
@@ -17,6 +18,7 @@ export default function ClientsPage() {
   const [items, setItems] = useState<Client[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [q, setQ] = useState("");
+  const navigate = useNavigate();
 
   async function load(query: string) {
     try {
@@ -98,17 +100,16 @@ export default function ClientsPage() {
             {items.map((c) => (
               <div
                 key={c._id}
-                className="flex flex-wrap items-center justify-between gap-3 p-4"
+                className="flex flex-wrap items-center justify-between gap-3 p-4 cursor-pointer"
+                onClick={() => navigate(`/clients/${c._id}`)}
               >
                 <div className="min-w-0">
                   <Link
                     to={`/clients/${c._id}`}
                     className="block truncate font-semibold text-gray-900 hover:underline"
                     title="Open details"
-                  >
-                    {clientLabel(c)}
-                  </Link>
-
+                  ></Link>
+                  <div className="block font-semibold">{clientLabel(c)}</div>
                   <div className="mt-1 truncate text-sm text-gray-600">
                     {[
                       c.email ? `Email: ${c.email}` : null,

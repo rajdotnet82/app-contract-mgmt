@@ -1,10 +1,47 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
-import { createInvoice } from "./api";
+import { createInvoice, listOrgAdminsForInvoiceFrom } from "./api";
+import type { InvoiceParty, OrgAdminUser } from "./types";
+
+function adminToFromParty(admin: OrgAdminUser): InvoiceParty {
+  const a = admin.address ?? {};
+  return {
+    name: admin.fullName || admin.email || "Me",
+    email: admin.email,
+    phone: admin.phone,
+    addressLine1: a.line1,
+    addressLine2: a.line2,
+    city: a.city,
+    state: a.state,
+    postalCode: a.postalCode,
+    country: a.country,
+  };
+}
 
 export default function InvoiceCreatePage() {
   const nav = useNavigate();
   const [creating, setCreating] = useState(false);
+  const [defaultFrom, setDefaultFrom] = useState<InvoiceParty | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      try {
+        const admins = await listOrgAdminsForInvoiceFrom();
+        if (cancelled) return;
+        if (admins?.length) {
+          setDefaultFrom(adminToFromParty(admins[0]));
+        }
+      } catch {
+        if (!cancelled) setDefaultFrom(null);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const create = async () => {
     setCreating(true);
@@ -14,6 +51,7 @@ export default function InvoiceCreatePage() {
       const inv = await createInvoice({
         status: "Draft",
         currency: "USD",
+        from: defaultFrom ?? undefined,
         lineItems: [{ description: "", rate: 0, qty: 1 }],
         taxPercent: 0,
         paidAmount: 0,
