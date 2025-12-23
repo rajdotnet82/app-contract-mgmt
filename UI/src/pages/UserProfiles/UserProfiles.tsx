@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
-import PageBreadcrumb from "../components/common/PageBreadCrumb";
-import UserMetaCard from "../components/UserProfile/UserMetaCard";
-import UserInfoCard from "../components/UserProfile/UserInfoCard";
-import UserAddressCard from "../components/UserProfile/UserAddressCard";
-import OrganizationCard from "../components/UserProfile/OrganizationCard";
-import PageMeta from "../components/common/PageMeta";
-import http from "../api/http";
+import PageBreadcrumb from "../../components/common/PageBreadCrumb";
+import UserMetaCard from "../../components/UserProfile/UserMetaCard";
+import UserInfoCard from "../../components/UserProfile/UserInfoCard";
+import UserAddressCard from "../../components/UserProfile/UserAddressCard";
+import OrganizationCard from "../../components/UserProfile/OrganizationCard";
+import PageMeta from "../../components/common/PageMeta";
+import http from "../../api/http";
 
 type OrgSummary = { id: string; name: string; role: string };
 

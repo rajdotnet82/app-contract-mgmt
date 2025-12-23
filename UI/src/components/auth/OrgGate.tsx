@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import http from "../api/http";
+import http from "../../api/http";
 
 type ActiveOrg = {
   id?: string; // backend returns id

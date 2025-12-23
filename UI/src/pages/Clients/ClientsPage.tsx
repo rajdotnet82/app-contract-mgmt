@@ -127,12 +127,12 @@ export default function ClientsPage() {
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <Link
-                    to={`/clients/${c._id}/edit`}
-                    className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm hover:bg-gray-50"
+                  {/* <button
+                    className="rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+                    onClick={() => navigate(`/clients/${c._id}/edit`)}
                   >
                     Edit
-                  </Link>
+                  </button> */}
 
                   <button
                     onClick={() => onDelete(c)}

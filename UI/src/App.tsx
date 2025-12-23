@@ -11,7 +11,7 @@ import RequireOrg from "./components/auth/RequireOrg";
 import { setTokenGetter } from "./components/auth/token";
 
 import Home from "./pages/Dashboard/Home";
-import UserProfiles from "./pages/UserProfiles";
+import UserProfiles from "./pages/UserProfiles/UserProfiles";
 
 import ContractsPage from "./pages/Contracts/ContractsPage";
 import ContractCreatePage from "./pages/Contracts/ContractCreatePage";
@@ -49,7 +49,7 @@ import BarChart from "./pages/Charts/BarChart";
 import OrgSetupPage from "./pages/Onboarding/OrgSetupPage";
 import InviteAcceptPage from "./pages/Invites/InviteAcceptPage";
 import { TokenBootstrap } from "./components/auth/TokenBootstrap";
-import OrgGate from "./components/OrgGate";
+import OrgGate from "./components/auth/OrgGate";
 
 export default function App() {
   return (
