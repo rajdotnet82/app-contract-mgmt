@@ -17,7 +17,7 @@ function computeLineItems(items: any[]): InvoiceLineItem[] {
     const rate = toNumber(li?.rate, 0);
     const qty = toNumber(li?.qty, 1); // default qty to 1 if missing
 
-    // ✅ Mongoose requires description, so never allow empty
+    // Mongoose requires description, so never allow empty
     const safeDescription = desc.length > 0 ? desc : "Item";
 
     const amount =
@@ -33,12 +33,11 @@ function computeLineItems(items: any[]): InvoiceLineItem[] {
     };
   });
 
-  // Optional: if nothing provided, still create one default line
+  // If nothing provided, still create one default line
   return safeItems.length > 0
     ? safeItems
     : [{ description: "Item", rate: 0, qty: 1, amount: 0 }];
 }
-
 
 function computeTotals(params: {
   lineItems: InvoiceLineItem[];
@@ -84,18 +83,25 @@ export async function listInvoices(req: Request, res: Response) {
   };
 
   const orgId = req.activeOrgId;
-  const filter: any = orgId
-    ? { $or: [{ orgId }, { orgId: { $exists: false } }] }
-    : {};
+  if (!orgId) return res.status(403).json({ code: "ORG_REQUIRED" });
+
+  // 🔒 Multi-tenant boundary: ALWAYS scope invoices to current org.
+  const filter: any = { orgId };
 
   const s = String(q || "").trim();
   if (s) {
-    // Search on invoice number + billTo name/email
-    filter.$or = [
-      { number: { $regex: s, $options: "i" } },
-      { "billTo.name": { $regex: s, $options: "i" } },
-      { "billTo.email": { $regex: s, $options: "i" } },
+    // Combine orgId + search safely
+    filter.$and = [
+      { orgId },
+      {
+        $or: [
+          { number: { $regex: s, $options: "i" } },
+          { "billTo.name": { $regex: s, $options: "i" } },
+          { "billTo.email": { $regex: s, $options: "i" } },
+        ],
+      },
     ];
+    delete filter.orgId;
   }
 
   const normalizedStatus = normalizeStatus(status);
@@ -105,17 +111,15 @@ export async function listInvoices(req: Request, res: Response) {
   const direction = String(sortDir).toLowerCase() === "asc" ? 1 : -1;
 
   const items = await InvoiceModel.find(filter).sort({ [sortField]: direction });
-
   res.json(items);
 }
 
 export async function getInvoice(req: Request, res: Response) {
   const { id } = req.params;
   const orgId = req.activeOrgId;
-  const item = orgId
-    ? await InvoiceModel.findOne({ _id: id, $or: [{ orgId }, { orgId: { $exists: false } }] })
-    : await InvoiceModel.findById(id);
+  if (!orgId) return res.status(403).json({ code: "ORG_REQUIRED" });
 
+  const item = await InvoiceModel.findOne({ _id: id, orgId });
   if (!item) return res.status(404).json({ message: "Invoice not found" });
 
   res.json(item);
@@ -125,6 +129,8 @@ export async function createInvoice(req: Request, res: Response) {
   const body = req.body ?? {};
   const orgId = req.activeOrgId;
   const fromUserId = req.userId;
+
+  if (!orgId) return res.status(403).json({ code: "ORG_REQUIRED" });
 
   // Defaults that make "New invoice" work even if UI sends minimal payload.
   const now = new Date();
@@ -136,17 +142,13 @@ export async function createInvoice(req: Request, res: Response) {
 
   // Use org name as a sensible default for the "from" party.
   let orgName: string | undefined;
-  if (orgId) {
-    const org = await Organization.findById(orgId).select("name");
-    orgName = org?.name;
-  }
+  const org = await Organization.findById(orgId).select("name");
+  orgName = org?.name;
 
   const fromParty = body.from ?? { name: orgName ?? "My Organization" };
-  // billTo.name is required; use a placeholder so the document is valid.
   const billToParty = body.billTo ?? { name: "Client" };
 
   const lineItems = computeLineItems(body.lineItems ?? []);
-
   const totals = computeTotals({
     lineItems,
     taxPercent: body.taxPercent,
@@ -154,7 +156,7 @@ export async function createInvoice(req: Request, res: Response) {
   });
 
   const doc = await InvoiceModel.create({
-    orgId: orgId ?? undefined,
+    orgId,
     fromUserId: fromUserId ?? undefined,
 
     number: generatedNumber,
@@ -183,7 +185,7 @@ export async function createInvoice(req: Request, res: Response) {
     activity: [
       {
         type: "Created",
-        message: `Invoice created`,
+        message: "Invoice created",
         at: new Date(),
       },
     ],
@@ -197,13 +199,12 @@ export async function updateInvoice(req: Request, res: Response) {
   const body = req.body ?? {};
 
   const orgId = req.activeOrgId;
-  const existing = orgId
-    ? await InvoiceModel.findOne({ _id: id, $or: [{ orgId }, { orgId: { $exists: false } }] })
-    : await InvoiceModel.findById(id);
+  if (!orgId) return res.status(403).json({ code: "ORG_REQUIRED" });
+
+  const existing = await InvoiceModel.findOne({ _id: id, orgId });
   if (!existing) return res.status(404).json({ message: "Invoice not found" });
 
   const lineItems = computeLineItems(body.lineItems ?? existing.lineItems);
-
   const totals = computeTotals({
     lineItems,
     taxPercent: body.taxPercent ?? existing.taxPercent,
@@ -212,13 +213,8 @@ export async function updateInvoice(req: Request, res: Response) {
 
   const nextStatus = normalizeStatus(body.status) ?? existing.status;
 
-  // Basic activity logging
   const activity = [...(existing.activity ?? [])];
-  activity.push({
-    type: "Updated",
-    message: "Invoice updated",
-    at: new Date(),
-  });
+  activity.push({ type: "Updated", message: "Invoice updated", at: new Date() });
 
   if (nextStatus !== existing.status) {
     activity.push({
@@ -256,9 +252,7 @@ export async function updateInvoice(req: Request, res: Response) {
 
   await existing.save();
 
-  const updated = orgId
-    ? await InvoiceModel.findOne({ _id: existing._id, $or: [{ orgId }, { orgId: { $exists: false } }] })
-    : await InvoiceModel.findById(existing._id);
+  const updated = await InvoiceModel.findOne({ _id: existing._id, orgId });
   res.json(updated ?? existing);
 }
 
@@ -266,10 +260,19 @@ export async function deleteInvoice(req: Request, res: Response) {
   const { id } = req.params;
 
   const orgId = req.activeOrgId;
-  const deleted = orgId
-    ? await InvoiceModel.findOneAndDelete({ _id: id, $or: [{ orgId }, { orgId: { $exists: false } }] })
-    : await InvoiceModel.findByIdAndDelete(id);
+  if (!orgId) return res.status(403).json({ code: "ORG_REQUIRED" });
+
+  const deleted = await InvoiceModel.findOneAndDelete({ _id: id, orgId });
   if (!deleted) return res.status(404).json({ message: "Invoice not found" });
 
   res.json({ ok: true });
+}
+
+// ✅ Convenience endpoint: clear all invoices in the CURRENT org
+export async function purgeInvoices(req: Request, res: Response) {
+  const orgId = req.activeOrgId;
+  if (!orgId) return res.status(403).json({ code: "ORG_REQUIRED" });
+
+  const result = await InvoiceModel.deleteMany({ orgId });
+  res.json({ ok: true, deletedCount: result.deletedCount ?? 0 });
 }

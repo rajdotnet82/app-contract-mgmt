@@ -1,138 +1,148 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { listClients, deleteClient } from "./api";
-import { Client, ClientStatus } from "./types";
+import { deleteClient, listClients } from "./api";
+import type { Client } from "./types";
 
-const STATUSES: (ClientStatus | "")[] = [
-  "",
-  "Lead",
-  "Active",
-  "Past",
-  "VIP",
-  "Cold",
-];
+function clientLabel(c: Client) {
+  // Prefer fullName. If it’s generic, fall back to first+last.
+  const n = (c.fullName || "").trim();
+  if (n && n.toLowerCase() !== "client") return n;
+
+  const alt = [c.firstName, c.lastName].filter(Boolean).join(" ").trim();
+  return alt || n || "Client";
+}
 
 export default function ClientsPage() {
-  const [items, setItems] = useState<Client[]>([]);
-  const [q, setQ] = useState("");
-  const [status, setStatus] = useState<ClientStatus | "">("");
   const [loading, setLoading] = useState(true);
+  const [items, setItems] = useState<Client[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [q, setQ] = useState("");
 
-  async function load() {
-    setLoading(true);
+  async function load(query: string) {
     try {
-      const data = await listClients({ q, status });
+      setLoading(true);
+      setError(null);
+      const data = await listClients({ q: query.trim() || undefined });
       setItems(data);
+    } catch (e: any) {
+      setError(
+        e?.response?.data?.message || e?.message || "Failed to load clients"
+      );
     } finally {
       setLoading(false);
     }
   }
 
   useEffect(() => {
-    void load();
+    // small debounce for typing
+    const t = setTimeout(() => load(q), 200);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q]);
+
+  useEffect(() => {
+    load("");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const count = useMemo(() => items.length, [items]);
+
+  async function onDelete(c: Client) {
+    const ok = window.confirm(`Delete client "${clientLabel(c)}"?`);
+    if (!ok) return;
+
+    await deleteClient(c._id);
+    await load(q);
+  }
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold">Clients</h1>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-xl font-semibold text-gray-900">Clients</h1>
+          <div className="mt-1 text-sm text-gray-500">
+            {loading ? "Loading…" : `Showing ${count}`}
+          </div>
+        </div>
+
         <Link
           to="/clients/new"
-          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+          className="rounded-xl bg-gray-900 px-4 py-2 text-sm font-medium text-white hover:bg-black"
         >
-          Add Client
+          New Client
         </Link>
       </div>
 
-      <div className="rounded-lg border bg-white p-4">
-        <div className="flex flex-col gap-3 md:flex-row md:items-end">
-          <div className="flex-1">
-            <label className="text-xs font-medium text-gray-600">Search</label>
-            <input
-              className="mt-1 w-full rounded-md border p-2 text-sm"
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              placeholder="Name, email, phone..."
-            />
-          </div>
-
-          <div className="w-full md:w-56">
-            <label className="text-xs font-medium text-gray-600">Status</label>
-            <select
-              className="mt-1 w-full rounded-md border p-2 text-sm"
-              value={status}
-              onChange={(e) => setStatus(e.target.value as any)}
-            >
-              {STATUSES.map((s) => (
-                <option key={s || "all"} value={s}>
-                  {s || "All"}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <button
-            className="rounded-lg border px-4 py-2 text-sm"
-            onClick={load}
-          >
-            Search
-          </button>
-        </div>
+      <div className="flex flex-wrap items-center gap-3">
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder="Search by name, email, phone…"
+          className="w-full max-w-xl rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-gray-300"
+        />
       </div>
 
-      <div className="rounded-lg border bg-white">
+      {error ? (
+        <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+          {error}
+        </div>
+      ) : null}
+
+      <div className="rounded-2xl border border-gray-200 bg-white shadow-sm">
         {loading ? (
-          <div className="p-4 text-sm text-gray-500">Loading…</div>
+          <div className="p-4 text-sm text-gray-600">Loading…</div>
         ) : items.length === 0 ? (
-          <div className="p-4 text-sm text-gray-500">No clients found.</div>
+          <div className="p-4 text-sm text-gray-600">No clients yet.</div>
         ) : (
-          <table className="w-full text-left text-sm">
-            <thead className="border-b bg-gray-50 text-xs text-gray-600">
-              <tr>
-                <th className="p-3">Name</th>
-                <th className="p-3">Email</th>
-                <th className="p-3">Phone</th>
-                <th className="p-3">Status</th>
-                <th className="p-3"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {items.map((c) => (
-                <tr key={c._id} className="border-b">
-                  <td className="p-3 font-medium">
-                    <Link
-                      className="text-blue-700 hover:underline"
-                      to={`/clients/${c._id}`}
-                    >
-                      {c.displayName}
-                    </Link>
-                  </td>
-                  <td className="p-3">{c.primaryEmail}</td>
-                  <td className="p-3">{c.primaryPhone || "-"}</td>
-                  <td className="p-3">{c.status}</td>
-                  <td className="p-3 text-right">
-                    <Link
-                      className="mr-3 text-blue-700 hover:underline"
-                      to={`/clients/${c._id}/edit`}
-                    >
-                      Edit
-                    </Link>
-                    <button
-                      className="text-red-600 hover:underline"
-                      onClick={async () => {
-                        if (!confirm("Delete this client?")) return;
-                        await deleteClient(c._id);
-                        await load();
-                      }}
-                    >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <div className="divide-y divide-gray-100">
+            {items.map((c) => (
+              <div
+                key={c._id}
+                className="flex flex-wrap items-center justify-between gap-3 p-4"
+              >
+                <div className="min-w-0">
+                  <Link
+                    to={`/clients/${c._id}`}
+                    className="block truncate font-semibold text-gray-900 hover:underline"
+                    title="Open details"
+                  >
+                    {clientLabel(c)}
+                  </Link>
+
+                  <div className="mt-1 truncate text-sm text-gray-600">
+                    {[
+                      c.email ? `Email: ${c.email}` : null,
+                      c.phone ? `Phone: ${c.phone}` : null,
+                    ]
+                      .filter(Boolean)
+                      .join(" • ") || "—"}
+                  </div>
+
+                  <div className="mt-1 truncate text-xs text-gray-400">
+                    {c.city || c.state || c.country
+                      ? [c.city, c.state, c.country].filter(Boolean).join(", ")
+                      : ""}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <Link
+                    to={`/clients/${c._id}/edit`}
+                    className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm hover:bg-gray-50"
+                  >
+                    Edit
+                  </Link>
+
+                  <button
+                    onClick={() => onDelete(c)}
+                    className="rounded-xl border border-red-200 bg-white px-3 py-2 text-sm text-red-700 hover:bg-red-50"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
         )}
       </div>
     </div>

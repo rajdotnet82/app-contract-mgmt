@@ -30,8 +30,8 @@ export interface InvoiceActivityEntry {
 }
 
 export interface Invoice extends Document {
-  // Multi-tenant scoping
-  orgId?: Types.ObjectId;
+  // 🔒 Multi-tenant scoping (REQUIRED)
+  orgId: Types.ObjectId;
 
   // Links
   fromUserId?: Types.ObjectId;
@@ -72,7 +72,7 @@ const LineItemSchema = new Schema<InvoiceLineItem>(
     description: { type: String, required: true, trim: true },
     rate: { type: Number, required: true, min: 0 },
     qty: { type: Number, required: true, min: 0 },
-    // ✅ not required — server can compute; prevents validation failures if UI forgets to send it
+    // not required — server can compute
     amount: { type: Number, min: 0, default: 0 },
   },
   { _id: false }
@@ -106,7 +106,8 @@ const ActivitySchema = new Schema<InvoiceActivityEntry>(
 
 const InvoiceSchema = new Schema<Invoice>(
   {
-    orgId: { type: Schema.Types.ObjectId, ref: "Organization", index: true },
+    // 🔒 Required tenant boundary
+    orgId: { type: Schema.Types.ObjectId, ref: "Organization", required: true, index: true },
 
     fromUserId: { type: Schema.Types.ObjectId, ref: "User", index: true },
     clientId: { type: Schema.Types.ObjectId, ref: "Client", index: true },
@@ -146,11 +147,8 @@ const InvoiceSchema = new Schema<Invoice>(
   { timestamps: true }
 );
 
-// ✅ Uniqueness within org (keeps legacy invoices without orgId unaffected)
-InvoiceSchema.index(
-  { orgId: 1, number: 1 },
-  { unique: true, partialFilterExpression: { orgId: { $exists: true } } }
-);
+// ✅ Uniqueness within org (strict)
+InvoiceSchema.index({ orgId: 1, number: 1 }, { unique: true });
 
 // ✅ Helpful indexes for list/sort screens
 InvoiceSchema.index({ orgId: 1, createdAt: -1 });

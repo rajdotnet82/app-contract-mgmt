@@ -61,3 +61,9 @@ export type Invoice = {
   createdAt?: string;
   updatedAt?: string;
 };
+
+export type OrgAdminForInvoiceFrom = {
+  id: string;
+  name: string;
+  email?: string;
+};

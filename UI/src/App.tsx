@@ -49,6 +49,7 @@ import BarChart from "./pages/Charts/BarChart";
 import OrgSetupPage from "./pages/Onboarding/OrgSetupPage";
 import InviteAcceptPage from "./pages/Invites/InviteAcceptPage";
 import { TokenBootstrap } from "./components/auth/TokenBootstrap";
+import OrgGate from "./components/OrgGate";
 
 export default function App() {
   return (
@@ -68,7 +69,14 @@ export default function App() {
               <Route element={<AppLayout />}>
                 <Route index path="/" element={<Home />} />
 
-                <Route path="/contracts" element={<ContractsPage />} />
+                <Route
+                  path="/contracts"
+                  element={
+                    <OrgGate fallbackTo="/profile">
+                      <ContractsPage />
+                    </OrgGate>
+                  }
+                />
                 <Route path="/contracts/new" element={<ContractCreatePage />} />
                 <Route
                   path="/contracts/:id/edit"
@@ -86,18 +94,32 @@ export default function App() {
                   element={<TemplateEditPage />}
                 />
 
-                <Route path="/clients" element={<ClientsPage />} />
+                <Route
+                  path="/clients"
+                  element={
+                    <OrgGate fallbackTo="/profile">
+                      <ClientsPage />
+                    </OrgGate>
+                  }
+                />
                 <Route path="/clients/new" element={<ClientCreatePage />} />
                 <Route path="/clients/:id" element={<ClientDetailsPage />} />
                 <Route path="/clients/:id/edit" element={<ClientEditPage />} />
 
-                <Route path="/invoices" element={<InvoicesPage />} />
+                <Route
+                  path="/invoices"
+                  element={
+                    <OrgGate fallbackTo="/profile">
+                      <InvoicesPage />
+                    </OrgGate>
+                  }
+                />
                 <Route path="/invoices/new" element={<InvoiceCreatePage />} />
                 <Route path="/invoices/:id" element={<InvoiceDetailsPage />} />
 
                 {/* Others */}
                 <Route path="/profile" element={<UserProfiles />} />
-                <Route path="/calendar" element={<Calendar />} />
+                {/* <Route path="/calendar" element={<Calendar />} />
                 <Route path="/blank" element={<Blank />} />
                 <Route path="/form-elements" element={<FormElements />} />
                 <Route path="/basic-tables" element={<BasicTables />} />
@@ -108,7 +130,7 @@ export default function App() {
                 <Route path="/images" element={<Images />} />
                 <Route path="/videos" element={<Videos />} />
                 <Route path="/line-chart" element={<LineChart />} />
-                <Route path="/bar-chart" element={<BarChart />} />
+                <Route path="/bar-chart" element={<BarChart />} /> */}
               </Route>
             </Route>
           </Route>
