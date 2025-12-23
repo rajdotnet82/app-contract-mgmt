@@ -18,6 +18,7 @@ import {
   UserIcon,
   DollarLineIcon,
   UserCircleIcon,
+  BoltIcon,
 } from "../icons";
 import { useSidebar } from "../context/SidebarContext";
 // import SidebarWidget from "./SidebarWidget";
@@ -54,6 +55,11 @@ const navItems: NavItem[] = [
     icon: <DollarLineIcon />,
     name: "Invoices",
     path: "/invoices",
+  },
+  {
+    icon: <BoltIcon />,
+    name: "Gigs",
+    path: "/gigs",
   },
   {
     icon: <UserCircleIcon />,

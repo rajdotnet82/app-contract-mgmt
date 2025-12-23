@@ -30,6 +30,7 @@ import ClientDetailsPage from "./pages/Clients/ClientDetailsPage";
 import InvoicesPage from "./pages/Invoices/InvoicesPage";
 import InvoiceCreatePage from "./pages/Invoices/InvoiceCreatePage";
 import InvoiceDetailsPage from "./pages/Invoices/InvoiceDetailsPage";
+import GigsPage from "./pages/Gigs/GigsPage";
 
 import Calendar from "./pages/Calendar";
 import Blank from "./pages/Blank";
@@ -105,6 +106,15 @@ export default function App() {
                 <Route path="/clients/new" element={<ClientCreatePage />} />
                 <Route path="/clients/:id" element={<ClientDetailsPage />} />
                 <Route path="/clients/:id/edit" element={<ClientEditPage />} />
+
+                <Route
+                  path="/gigs"
+                  element={
+                    <OrgGate fallbackTo="/profile">
+                      <GigsPage />
+                    </OrgGate>
+                  }
+                />
 
                 <Route
                   path="/invoices"
